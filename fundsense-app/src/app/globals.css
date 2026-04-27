@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+@theme {
+  --animate-pulse-dot: pulse_dot 2s infinite;
+  
+  @keyframes pulse_dot {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.4);
+    }
+  }
+}
+
 @layer utilities {
   .gradient-text-logo {
     background: linear-gradient(135deg, #c7d2fe 0%, #7dd3fc 100%);
@@ -21,6 +43,10 @@
   }
   .glow-sky {
     background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
+  }
+  .search-glass {
+    background: rgba(30, 41, 59, 0.7);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .card-glass {
     background: rgba(30, 41, 59, 0.5);
