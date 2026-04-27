@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="FundSense — Risk Profiler Quiz to discover your investment style." />
+  <title>Risk Profiler — FundSense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .gradient-text-logo {
+        background: linear-gradient(135deg, #c7d2fe 0%, #7dd3fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .gradient-text-heading {
+        background: linear-gradient(to right, #ffffff 30%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .gradient-btn {
+        background: linear-gradient(135deg, #6366f1, #0ea5e9);
+      }
+      .glow-indigo {
+        background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+      }
+      .glow-sky {
+        background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
+      }
+      .card-glass {
+        background: rgba(30, 41, 59, 0.5);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+      }
+    }
+  </style>
+  <style>
+    ::selection { background: rgba(99, 102, 241, 0.3); }
+    .fade-out { opacity: 0; pointer-events: none; }
+    .fade-in { opacity: 1; pointer-events: auto; }
+  </style>
+</head>
+
+<body class="m-0 p-0 font-inter bg-slate-900 text-slate-100 min-h-screen overflow-x-hidden">
+
+  <!-- Ambient background glow -->
+  <div class="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full pointer-events-none z-0"></div>
+  <div class="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full pointer-events-none z-0"></div>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 sm:px-10 py-4 bg-slate-900/75 backdrop-blur-xl border-b border-white/[0.06]">
+    <!-- Logo -->
+    <a href="index.html" id="logo" class="flex items-center gap-2.5 cursor-pointer no-underline">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="shrink-0">
+        <rect width="32" height="32" rx="8" fill="url(#logoGrad)" />
+        <path d="M9 22L13 13L17 17L23 9" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="23" cy="9" r="2" fill="white" />
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+            <stop stop-color="#6366f1" />
+            <stop offset="1" stop-color="#0ea5e9" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="text-[22px] font-extrabold tracking-tight gradient-text-logo">FundSense</span>
+    </a>
+
+    <!-- Back button & Nav -->
+    <div class="flex items-center gap-6">
+      <a href="quiz.html" class="text-indigo-400 no-underline text-sm font-medium">Risk Quiz</a>
+      <a href="sip.html" class="text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200">SIP Calculator</a>
+      <a href="compare.html" class="text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200">Compare</a>
+      <a href="index.html" class="flex items-center gap-2 text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        <span class="hidden sm:inline">Back to Search</span>
+        <span class="sm:hidden">Back</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="relative z-[1] pt-[120px] pb-20 px-6 max-w-3xl mx-auto min-h-[80vh] flex flex-col justify-center">
+    
+    <div id="header-text" class="text-center mb-10 transition-opacity duration-300">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight gradient-text-heading">Risk Profiler</h1>
+      <p class="text-slate-400 max-w-lg mx-auto">Discover your investing style to find the mutual funds that suit you best.</p>
+    </div>
+
+    <!-- Quiz Container -->
+    <div id="quiz-container" class="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-10 backdrop-blur-lg transition-opacity duration-300">
+       <div class="flex justify-between items-center mb-4">
+          <span id="question-counter" class="text-indigo-400 font-semibold text-sm">Question 1 of 5</span>
+       </div>
+       <!-- Progress Bar -->
+       <div class="w-full h-2 bg-slate-800 rounded-full mb-8 overflow-hidden border border-white/[0.04]">
+          <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-500" style="width: 20%"></div>
+       </div>
+
+       <!-- Question -->
+       <h2 id="question-text" class="text-xl sm:text-2xl font-bold text-white mb-8 leading-tight"></h2>
+
+       <!-- Options -->
+       <div id="options-container" class="flex flex-col gap-4">
+          <!-- option cards injected by JS -->
+       </div>
+    </div>
+
+    <!-- Result Container -->
+    <div id="result-container" class="hidden transition-opacity duration-500 opacity-0 mt-[-60px]">
+       <div class="card-glass border border-white/[0.06] rounded-2xl p-8 sm:p-12 backdrop-blur-lg text-center mb-8">
+          <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-5">Your Profile</p>
+          <div class="inline-block mb-6">
+             <span id="result-badge" class="px-5 py-2.5 text-sm font-bold rounded-full"></span>
+          </div>
+          <p id="result-desc" class="text-slate-300 text-base max-w-lg mx-auto leading-relaxed"></p>
+       </div>
+
+       <h3 class="text-lg font-bold text-white mb-5 pl-2 flex items-center gap-2">
+         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+         </svg>
+         Recommended Categories
+       </h3>
+       
+       <div id="recommended-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          <!-- Cards injected here -->
+       </div>
+
+       <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <button id="retake-btn" class="w-full sm:w-auto px-6 py-3.5 text-[15px] font-semibold text-slate-300 bg-slate-800 border border-white/[0.08] rounded-xl hover:bg-slate-700 hover:text-white transition-colors cursor-pointer">
+            Retake Quiz
+          </button>
+          <a href="index.html" class="w-full sm:w-auto px-6 py-3.5 text-[15px] font-semibold text-white gradient-btn border-none rounded-xl hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.45)] transition-all text-center no-underline block">
+            Find these funds
+          </a>
+       </div>
+    </div>
+  </main>
+
+  <script>
+    const questions = [
+      {
+        text: "What is your investment goal?",
+        options: [
+          { text: "Save for retirement", points: 3 },
+          { text: "Build wealth", points: 2 },
+          { text: "Beat inflation", points: 1 },
+          { text: "Emergency fund", points: 0 }
+        ]
+      },
+      {
+        text: "How long can you stay invested?",
+        options: [
+          { text: "More than 10 years", points: 3 },
+          { text: "5-10 years", points: 2 },
+          { text: "1-5 years", points: 1 },
+          { text: "Less than 1 year", points: 0 }
+        ]
+      },
+      {
+        text: "If your investment drops 20%, what do you do?",
+        options: [
+          { text: "Buy more", points: 3 },
+          { text: "Wait and watch", points: 2 },
+          { text: "Sell some", points: 1 },
+          { text: "Sell everything", points: 0 }
+        ]
+      },
+      {
+        text: "What is your monthly income?",
+        options: [
+          { text: "Above ₹1 Lakh", points: 3 },
+          { text: "₹50k-1 Lakh", points: 2 },
+          { text: "₹25k-50k", points: 1 },
+          { text: "Below ₹25k", points: 0 }
+        ]
+      },
+      {
+        text: "How much of savings can you risk?",
+        options: [
+          { text: "More than 50%", points: 3 },
+          { text: "25-50%", points: 2 },
+          { text: "10-25%", points: 1 },
+          { text: "Less than 10%", points: 0 }
+        ]
+      }
+    ];
+
+    let currentQuestion = 0;
+    let totalScore = 0;
+
+    const quizContainer = document.getElementById('quiz-container');
+    const resultContainer = document.getElementById('result-container');
+    const headerText = document.getElementById('header-text');
+    
+    const questionCounter = document.getElementById('question-counter');
+    const progressBar = document.getElementById('progress-bar');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+
+    const resultBadge = document.getElementById('result-badge');
+    const resultDesc = document.getElementById('result-desc');
+    const recommendedContainer = document.getElementById('recommended-container');
+    const retakeBtn = document.getElementById('retake-btn');
+
+    function renderQuestion() {
+      const q = questions[currentQuestion];
+      
+      // Update header
+      questionCounter.textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+      progressBar.style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
+      questionText.textContent = q.text;
+
+      // Update options
+      optionsContainer.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left px-5 py-4 bg-slate-800/50 border border-white/[0.04] rounded-xl text-slate-200 font-medium hover:bg-indigo-500/15 hover:border-indigo-500/30 hover:text-indigo-100 transition-all cursor-pointer group flex justify-between items-center";
+        btn.innerHTML = `
+          <span>${opt.text}</span>
+          <svg class="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        `;
+        
+        btn.onclick = () => handleAnswer(opt.points);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(points) {
+      totalScore += points;
+      
+      // Fade out effect
+      quizContainer.classList.add('opacity-0');
+      
+      setTimeout(() => {
+        currentQuestion++;
+        if (currentQuestion < questions.length) {
+          renderQuestion();
+          quizContainer.classList.remove('opacity-0');
+        } else {
+          showResult();
+        }
+      }, 300); // Wait for fade out
+    }
+
+    function showResult() {
+      quizContainer.classList.add('hidden');
+      headerText.classList.add('hidden');
+      
+      let type = "";
+      let badgeClass = "";
+      let desc = "";
+      let recommended = [];
+
+      if (totalScore >= 12) {
+        type = "Aggressive Investor";
+        badgeClass = "bg-red-500/15 text-red-400 border border-red-500/25 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+        desc = "You are willing to take significant risks for potentially higher returns. Short-term market volatility doesn't bother you much as you are focused on long-term wealth creation.";
+        recommended = [
+          { title: "Small Cap", desc: "High growth potential but highly volatile. Best for long term." },
+          { title: "Mid Cap", desc: "Balance of good growth and moderate to high risk." },
+          { title: "Sectoral", desc: "Targeted high-risk bets on specific market sectors." }
+        ];
+      } else if (totalScore >= 7) {
+        type = "Moderate Investor";
+        badgeClass = "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+        desc = "You seek a balance between capital appreciation and capital preservation. You can handle some market fluctuations but prefer a degree of stability.";
+        recommended = [
+          { title: "Flexi Cap", desc: "Dynamically shifts across all market caps based on conditions." },
+          { title: "Hybrid Funds", desc: "Mix of equity and debt for balanced growth and safety." },
+          { title: "Large & Mid", desc: "Stability of large companies with the growth of mid caps." }
+        ];
+      } else {
+        type = "Conservative Investor";
+        badgeClass = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+        desc = "Your primary goal is capital preservation. You prefer steady, predictable returns over high-risk, high-reward opportunities. You dislike seeing your portfolio value drop.";
+        recommended = [
+          { title: "Liquid Funds", desc: "Extremely low risk, similar to a high-yield savings account." },
+          { title: "Debt Funds", desc: "Steady returns by lending to solid companies and government." },
+          { title: "Large Cap", desc: "Invests in top 100 bluechip, highly stable companies." }
+        ];
+      }
+
+      resultBadge.textContent = type;
+      resultBadge.className = `px-5 py-2.5 text-sm font-bold rounded-full ${badgeClass}`;
+      resultDesc.textContent = desc;
+
+      recommendedContainer.innerHTML = '';
+      recommended.forEach(rec => {
+        const div = document.createElement('div');
+        div.className = "bg-slate-800/40 border border-white/[0.04] p-5 rounded-xl hover:bg-slate-800/60 transition-colors";
+        div.innerHTML = `
+          <h4 class="text-white font-bold mb-2">${rec.title}</h4>
+          <p class="text-slate-400 text-xs leading-relaxed">${rec.desc}</p>
+        `;
+        recommendedContainer.appendChild(div);
+      });
+
+      resultContainer.classList.remove('hidden');
+      setTimeout(() => {
+        resultContainer.classList.remove('opacity-0');
+        resultContainer.classList.remove('mt-[-60px]');
+      }, 50);
+    }
+
+    retakeBtn.addEventListener('click', () => {
+      // Reset
+      currentQuestion = 0;
+      totalScore = 0;
+      
+      resultContainer.classList.add('opacity-0');
+      
+      setTimeout(() => {
+        resultContainer.classList.add('hidden');
+        headerText.classList.remove('hidden');
+        quizContainer.classList.remove('hidden');
+        
+        renderQuestion();
+        
+        setTimeout(() => {
+          quizContainer.classList.remove('opacity-0');
+        }, 50);
+      }, 300);
+    });
+
+    // Boot
+    renderQuestion();
+  </script>
+</body>
+</html>
