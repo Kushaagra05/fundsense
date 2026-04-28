@@ -59,17 +59,11 @@ export default function Home() {
     setActiveIndex(-1);
   }, [query, allFunds]);
 
-  useEffect(() => {
-    if (showDropdown && results.length > 0) {
-      document.body.style.overflow = 'auto';
-    } else {
-      document.body.style.overflow = 'hidden';
-    }
-  }, [showDropdown, results]);
+  // No body overflow manipulation needed as per index.html behavior
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showDropdown || results.length === 0) return;
-    
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex(prev => (prev < results.length - 1 ? prev + 1 : 0));
@@ -108,7 +102,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-900 relative flex flex-col items-center justify-center text-center overflow-visible">
+    <main className="relative z-[1] flex flex-col items-center justify-center text-center min-h-screen pt-[120px] pb-20 px-6 box-border">
       {/* Ambient background glow */}
       <div className="absolute -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full pointer-events-none z-0"></div>
       <div className="absolute -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full pointer-events-none z-0"></div>
@@ -146,9 +140,9 @@ export default function Home() {
               </svg>
             )}
           </div>
-          
-          <input 
-            type="text" 
+
+          <input
+            type="text"
             placeholder={isLoading ? "Loading fund database..." : "Search mutual funds..."}
             value={query}
             onChange={(e) => {
@@ -162,7 +156,7 @@ export default function Home() {
             className="flex-1 bg-transparent border-none outline-none text-base font-inter text-slate-200 py-3 px-1 placeholder:text-slate-500 disabled:opacity-50"
           />
 
-          <button 
+          <button
             onClick={() => {
               if (results.length > 0) selectFund(results[0]);
             }}
@@ -174,19 +168,18 @@ export default function Home() {
 
         {/* Dropdown */}
         {showDropdown && query.length > 0 && results.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 rounded-xl border border-slate-700 z-50">
-            <ul className="list-none m-0 p-1.5">
+          <div className="absolute left-0 right-0 top-full mt-2 rounded-xl border border-white/[0.08] bg-slate-800/95 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.4)] overflow-hidden z-50">
+            <ul className="list-none m-0 p-1.5 max-h-[380px] overflow-y-auto">
               {results.map((fund, i) => (
-                <li 
+                <li
                   key={fund.schemeCode}
                   onClick={() => selectFund(fund)}
                   onMouseEnter={() => setActiveIndex(i)}
-                  className={`px-4 py-3 text-sm rounded-lg cursor-pointer transition-colors duration-150 flex items-center gap-3 group ${
-                    activeIndex === i ? 'bg-indigo-500/15 text-white' : 'text-slate-200 hover:bg-indigo-500/15 hover:text-white'
-                  }`}
+                  className={`px-4 py-3 text-sm rounded-lg cursor-pointer transition-colors duration-150 flex items-center gap-3 group ${activeIndex === i ? 'bg-indigo-500/15 text-white' : 'text-slate-200 hover:bg-indigo-500/15 hover:text-white'
+                    }`}
                 >
                   <svg className={`w-4 h-4 shrink-0 transition-colors ${activeIndex === i ? 'text-indigo-400' : 'text-slate-600 group-hover:text-indigo-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                   <span>{highlightMatch(fund.schemeName, query)}</span>
                 </li>
@@ -199,7 +192,7 @@ export default function Home() {
       {/* Quick suggestion chips */}
       <div className="relative z-10 flex flex-wrap justify-center gap-2.5 mt-6">
         {['SBI Bluechip Fund', 'HDFC Mid-Cap', 'Axis Small Cap', 'Parag Parikh Flexi Cap'].map((fundName) => (
-          <span 
+          <span
             key={fundName}
             onClick={() => {
               setQuery(fundName);

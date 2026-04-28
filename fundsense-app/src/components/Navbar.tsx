@@ -20,7 +20,7 @@ export default function Navbar() {
               </linearGradient>
             </defs>
           </svg>
-          <span className="text-[22px] font-extrabold tracking-tight transition-colors group-hover:text-blue-400">FundSense</span>
+          <span className="text-[22px] font-extrabold tracking-tight gradient-text-logo transition-transform group-hover:scale-[1.02]">FundSense</span>
         </Link>
 
         <div className="hidden sm:flex items-center gap-8">
@@ -28,6 +28,9 @@ export default function Navbar() {
           <Link href="/sip" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">SIP Calculator</Link>
           <Link href="/quiz" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">Risk Quiz</Link>
           <Link href="/portfolio" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">Portfolio</Link>
+          <Link href="/features" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">Features</Link>
+          <Link href="/pricing" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">Pricing</Link>
+          <Link href="/about" className="text-slate-400 no-underline text-sm font-medium hover:text-slate-200 transition-colors">About</Link>
           <button className="px-5 py-2 text-sm font-semibold font-inter text-white gradient-btn border-none rounded-lg cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(99,102,241,0.4)]">
             Get Started
           </button>
