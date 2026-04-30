@@ -41,6 +41,13 @@ with Next.js 14, Tailwind CSS, TypeScript.
   click outside handler from firing first
 - Use separate refs for each search wrapper when multiple exist on same page
 
+## Deployment Notes (Vercel)
+- CLI: npm i -g vercel, then vercel login
+- Link project from fundsense-app/ root with vercel
+- Prod deploy: vercel --prod
+- Required env vars on Vercel: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, OPENAI_API_KEY
+- Production URL: https://fundsense-app.vercel.app
+
 ## What Needs to Be Done Next
 1. Supabase auth (signup/login/logout)
 2. Save portfolio to Supabase instead of localStorage
