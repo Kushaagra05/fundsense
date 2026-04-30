@@ -47,7 +47,7 @@ export default function Navbar() {
       <div className="flex items-center gap-6">
         <div className="hidden sm:flex items-center gap-6">
           <Link href="/compare" className="text-white no-underline text-sm font-medium hover:text-slate-200 transition-colors">Compare</Link>
-          <Link href="/sip" className="text-white no-underline text-sm font-medium hover:text-slate-200 transition-colors">SIP Calculator</Link>
+          <Link href="/sip" className="text-white no-underline text-sm font-medium hover:text-slate-200 transition-colors">Calculators</Link>
           <Link href="/quiz" className="text-white no-underline text-sm font-medium hover:text-slate-200 transition-colors">Risk Quiz</Link>
           <Link href="/portfolio" className="text-white no-underline text-sm font-medium hover:text-slate-200 transition-colors">Portfolio</Link>
         </div>
