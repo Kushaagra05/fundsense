@@ -500,7 +500,92 @@ export default function Portfolio() {
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight gradient-text-heading">My Portfolio</h1>
           <p className="text-slate-400">Track all your mutual fund investments in one place.</p>
         </div>
+        {/* Portfolio Health Score */}
+        {portfolio.length > 0 && (
+          <div className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-10">
+            <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
+              🏥 Portfolio Health Score
+            </h3>
+            {(() => {
+              let score = 100;
+              const feedback: { text: string; color: string }[] = [];
 
+              // Check 1: Overall returns
+              if (summary.totalPct < 0) {
+                score -= 50;
+                feedback.push({ text: "Portfolio abhi loss mein hai — thoda patience rakhiye", color: "text-red-400" });
+              } else if (summary.totalPct < 5) {
+                score -= 25;
+                feedback.push({ text: "Returns thode weak hain — better funds explore kariye", color: "text-yellow-400" });
+              } else if (summary.totalPct < 12) {
+                score -= 10;
+                feedback.push({ text: "Returns theek hain — aur improve ho sakta hai", color: "text-yellow-400" });
+              } else {
+                feedback.push({ text: "Returns acche hain — sahi track pe hai aap!", color: "text-emerald-400" });
+              }
+
+              // Check 2: Too many funds
+              if (portfolio.length > 5) {
+                score -= 20;
+                feedback.push({ text: `${portfolio.length} funds bahut zyada hain — 3-4 kaafi hote hain`, color: "text-yellow-400" });
+              } else if (portfolio.length === 1) {
+                score -= 10;
+                feedback.push({ text: "Sirf ek fund hai — thoda diversify kariye", color: "text-yellow-400" });
+              } else {
+                feedback.push({ text: `${portfolio.length} funds — diversification theek hai`, color: "text-emerald-400" });
+              }
+
+              // Check 3: Regular vs Direct plans
+              const regularCount = portfolio.filter(item => item.name.toLowerCase().includes("regular")).length;
+              if (regularCount > 0) {
+                score -= 20;
+                feedback.push({ text: `${regularCount} Regular Plan fund(s) hai — Direct mein switch kariye, fees bachegi`, color: "text-red-400" });
+              }
+
+              // Clamp score
+              score = Math.max(0, Math.min(100, score));
+
+              const scoreColor = score >= 70 ? "#34d399" : score >= 40 ? "#fbbf24" : "#f87171";
+              const scoreLabel = score >= 70 ? "Healthy" : score >= 40 ? "Needs Attention" : "At Risk";
+              const scoreLabelColor = score >= 70 ? "text-emerald-400" : score >= 40 ? "text-yellow-400" : "text-red-400";
+
+              return (
+                <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start">
+                  {/* Score Circle */}
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="50" fill="none" stroke="#1e293b" strokeWidth="10" />
+                      <circle
+                        cx="60" cy="60" r="50" fill="none"
+                        stroke={scoreColor} strokeWidth="10"
+                        strokeDasharray={`${2 * Math.PI * 50}`}
+                        strokeDashoffset={`${2 * Math.PI * 50 * (1 - score / 100)}`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 60 60)"
+                        style={{ transition: "stroke-dashoffset 1s ease" }}
+                      />
+                      <text x="60" y="55" textAnchor="middle" fill="white" fontSize="22" fontWeight="bold">{score}</text>
+                      <text x="60" y="73" textAnchor="middle" fill="#94a3b8" fontSize="11">/100</text>
+                    </svg>
+                    <span className={`text-sm font-semibold ${scoreLabelColor}`}>{scoreLabel}</span>
+                  </div>
+
+                  {/* Feedback */}
+                  <div className="flex flex-col gap-3 w-full">
+                    {feedback.map((f, i) => (
+                      <div key={i} className="flex items-start gap-3 bg-slate-800/40 rounded-xl px-4 py-3 border border-white/[0.04]">
+                        <span className="mt-0.5 text-base">
+                          {f.color.includes("emerald") ? "✅" : f.color.includes("yellow") ? "⚠️" : "🚨"}
+                        </span>
+                        <span className={`text-sm ${f.color}`}>{f.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
         {authChecked && !userId && (
           <div className="mb-6 card-glass border border-white/[0.06] rounded-2xl p-4 sm:p-5 backdrop-blur-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="text-slate-300 text-sm">💾 Login to save your portfolio to the cloud and access it from any device</p>
