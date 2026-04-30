@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import FundChatWidget from '@/components/FundChatWidget';
 
 type NavData = {
   date: string;
@@ -198,6 +199,9 @@ export default function FundDetail() {
   const return1y = calcReturn(navData, 365);
   const return3y = calcCAGR(navData, 3);
 
+  const formatReturn = (value: number | null) => (value === null ? 'N/A' : `${value.toFixed(2)}%`);
+  const fundContext = `Fund: ${meta.scheme_name}\nFund House: ${meta.fund_house || 'N/A'}\nCategory: ${meta.scheme_category || meta.scheme_type || 'N/A'}\nCurrent NAV: ₹${latestNav.toFixed(4)}\nReturns: 1M ${formatReturn(return1m)}, 6M ${formatReturn(return6m)}, 1Y ${formatReturn(return1y)}, 3Y CAGR ${formatReturn(return3y)}`;
+
   const ReturnDisplay = ({ label, value }: { label: string, value: number | null }) => {
     if (value === null) {
       return (
@@ -325,6 +329,11 @@ export default function FundDetail() {
               <span className="text-slate-200 text-sm font-medium">{navData.length > 0 ? navData[navData.length - 1].date : '—'}</span>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">
+          <h2 className="text-base font-bold text-white mb-5">Ask AI About This Fund</h2>
+          <FundChatWidget fundName={meta.scheme_name} fundContext={fundContext} />
         </div>
 
       </div>

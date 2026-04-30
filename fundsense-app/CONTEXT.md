@@ -25,6 +25,9 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Simple Mode portfolio entry — user enters amount + date only, 
   app auto-calculates units from historical NAV
 - Live NAV fetching for all portfolio holdings
+- Fund detail AI chat widget (FundChatWidget) below Fund Information
+- Fund chat widget component for fund Q&A
+- Fund chat API route (OpenAI) with short Hinglish answers and a clear verdict
 
 ## Important Rules
 - Always use "use client" for interactive components

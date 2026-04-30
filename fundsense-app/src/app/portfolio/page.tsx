@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type FundListItem = {
   schemeCode: number;
@@ -44,6 +45,28 @@ export default function Portfolio() {
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [isLoadingNavs, setIsLoadingNavs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const fetchNavsForEntries = useCallback(async (entries: PortfolioEntry[]) => {
+    if (entries.length === 0) return;
+    setIsLoadingNavs(true);
+    const updated = await Promise.all(
+      entries.map(async (item) => {
+        try {
+          const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
+          if (!res.ok) throw new Error("NAV error");
+          const data = await res.json();
+          const nav = data?.data?.[0]?.nav;
+          return nav ? { ...item, curNav: parseFloat(nav) } : item;
+        } catch {
+          return item;
+        }
+      })
+    );
+    setPortfolio(updated);
+    setIsLoadingNavs(false);
+  }, []);
 
   const simpleSearchRef = useRef<HTMLDivElement>(null);
   const advancedSearchRef = useRef<HTMLDivElement>(null);
@@ -54,25 +77,54 @@ export default function Portfolio() {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as PortfolioEntry[];
-        setPortfolio(parsed);
-        if (parsed.length > 0) {
-          fetchNavsForEntries(parsed);
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+
+      if (user) {
+        setUserId(user.id);
+        const { data: rows } = await supabase.from("portfolios").select("*").eq("user_id", user.id);
+        if (rows && rows.length > 0) {
+          const mapped = rows.map((row: any) => ({
+            id: String(row.id),
+            code: Number(row.code ?? row.scheme_code ?? row.schemeCode),
+            name: row.name ?? row.scheme_name ?? row.schemeName,
+            units: Number(row.units),
+            buyNav: Number(row.buy_nav ?? row.buyNav),
+            date: row.date,
+            curNav: null,
+          })) as PortfolioEntry[];
+          setPortfolio(mapped);
+          fetchNavsForEntries(mapped);
         }
-      } catch {
-        setPortfolio([]);
+        hasLoadedRef.current = true;
+        setAuthChecked(true);
+        return;
       }
-    }
-    hasLoadedRef.current = true;
-  }, []);
+
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as PortfolioEntry[];
+          setPortfolio(parsed);
+          if (parsed.length > 0) {
+            fetchNavsForEntries(parsed);
+          }
+        } catch {
+          setPortfolio([]);
+        }
+      }
+      hasLoadedRef.current = true;
+      setAuthChecked(true);
+    };
+    init();
+  }, [fetchNavsForEntries]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
+    if (userId) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio));
-  }, [portfolio]);
+  }, [portfolio, userId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -143,23 +195,6 @@ export default function Portfolio() {
     return { totalInvested, totalCurrent, totalGain, totalPct, bestFund, gainClass, gainSign };
   }, [portfolio]);
 
-  const fetchNavsForEntries = useCallback(async (entries: PortfolioEntry[]) => {
-    if (entries.length === 0) return;
-    setIsLoadingNavs(true);
-    const updated = await Promise.all(
-      entries.map(async (item) => {
-        try {
-          const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
-          if (!res.ok) throw new Error("NAV error");
-          const data = await res.json();
-          const nav = data?.data?.[0]?.nav;
-          return nav ? { ...item, curNav: parseFloat(nav) } : item;
-        } catch { return item; }
-      })
-    );
-    setPortfolio(updated);
-    setIsLoadingNavs(false);
-  }, []);
 
   const fetchLiveNavs = useCallback(async () => {
     if (portfolio.length === 0) return;
@@ -225,7 +260,38 @@ export default function Portfolio() {
         date,
         curNav: null,
       };
-      setPortfolio((prev) => [...prev, newEntry]);
+
+      if (userId) {
+        const { data, error } = await supabase
+          .from("portfolios")
+          .insert({
+            user_id: userId,
+            code: newEntry.code,
+            name: newEntry.name,
+            units: newEntry.units,
+            buy_nav: newEntry.buyNav,
+            date: newEntry.date,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          alert(error.message);
+        } else if (data) {
+          const mapped: PortfolioEntry = {
+            id: String(data.id),
+            code: Number(data.code ?? data.scheme_code ?? data.schemeCode),
+            name: data.name ?? data.scheme_name ?? data.schemeName,
+            units: Number(data.units),
+            buyNav: Number(data.buy_nav ?? data.buyNav),
+            date: data.date,
+            curNav: null,
+          };
+          setPortfolio((prev) => [...prev, mapped]);
+        }
+      } else {
+        setPortfolio((prev) => [...prev, newEntry]);
+      }
       setSelectedFund(null);
       setSearchQuery("");
       setSimpleAmount("");
@@ -252,7 +318,38 @@ export default function Portfolio() {
       date,
       curNav: null,
     };
-    setPortfolio((prev) => [...prev, newEntry]);
+
+    if (userId) {
+      const { data, error } = await supabase
+        .from("portfolios")
+        .insert({
+          user_id: userId,
+          code: newEntry.code,
+          name: newEntry.name,
+          units: newEntry.units,
+          buy_nav: newEntry.buyNav,
+          date: newEntry.date,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        alert(error.message);
+      } else if (data) {
+        const mapped: PortfolioEntry = {
+          id: String(data.id),
+          code: Number(data.code ?? data.scheme_code ?? data.schemeCode),
+          name: data.name ?? data.scheme_name ?? data.schemeName,
+          units: Number(data.units),
+          buyNav: Number(data.buy_nav ?? data.buyNav),
+          date: data.date,
+          curNav: null,
+        };
+        setPortfolio((prev) => [...prev, mapped]);
+      }
+    } else {
+      setPortfolio((prev) => [...prev, newEntry]);
+    }
     setSelectedFund(null);
     setSearchQuery("");
     setUnits("");
@@ -260,7 +357,12 @@ export default function Portfolio() {
     setDate("");
   };
 
-  const handleDelete = (id: string) => setPortfolio((prev) => prev.filter((item) => item.id !== id));
+  const handleDelete = async (id: string) => {
+    if (userId) {
+      await supabase.from("portfolios").delete().eq("id", id).eq("user_id", userId);
+    }
+    setPortfolio((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const SearchDropdown = ({ funds }: { funds: FundListItem[] }) => (
     <div className={`${showDropdown ? "" : "hidden"} absolute left-0 right-0 top-full mt-2 rounded-xl border border-white/[0.08] bg-slate-800/95 backdrop-blur-xl shadow-xl overflow-hidden z-[9999]`}>
@@ -325,6 +427,18 @@ export default function Portfolio() {
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight gradient-text-heading">My Portfolio</h1>
           <p className="text-slate-400">Track all your mutual fund investments in one place.</p>
         </div>
+
+        {authChecked && !userId && (
+          <div className="mb-6 card-glass border border-white/[0.06] rounded-2xl p-4 sm:p-5 backdrop-blur-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p className="text-slate-300 text-sm">💾 Login to save your portfolio to the cloud and access it from any device</p>
+            <Link
+              href="/auth"
+              className="px-4 py-2 text-sm font-semibold text-white bg-slate-800/60 border border-white/[0.08] rounded-lg hover:bg-slate-700/70 transition-colors text-center"
+            >
+              Login
+            </Link>
+          </div>
+        )}
 
         <div className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-10">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
