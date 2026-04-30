@@ -106,6 +106,7 @@ export default function ComparePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
   const handleSearch = (query: string, index: number) => {
     if (index === 0) {
       setSearchQuery1(query);
@@ -339,7 +340,7 @@ export default function ComparePage() {
   };
 
   return (
-    <main className="relative z-[1] pt-[100px] pb-20 px-4 sm:px-6 max-w-6xl mx-auto overflow-hidden">
+    <main className="relative z-[1] pt-[100px] pb-20 px-4 sm:px-6 max-w-6xl mx-auto">
       {/* Ambient background glow */}
       <div className="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)] rounded-full pointer-events-none z-0"></div>
       <div className="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(14,165,233,0.12)_0%,transparent_70%)] rounded-full pointer-events-none z-0"></div>
@@ -405,7 +406,7 @@ export default function ComparePage() {
                     <li
                       key={fund.schemeCode}
                       className="px-4 py-2.5 text-sm text-slate-200 rounded-lg cursor-pointer transition-colors hover:bg-indigo-500/15 hover:text-white flex items-center gap-2"
-                      onClick={() => selectFund(fund, 0)}
+                      onMouseDown={() => selectFund(fund, 0)}
                     >
                       <svg
                         className="w-4 h-4 shrink-0 text-slate-600"
@@ -526,7 +527,7 @@ export default function ComparePage() {
                     <li
                       key={fund.schemeCode}
                       className="px-4 py-2.5 text-sm text-slate-200 rounded-lg cursor-pointer transition-colors hover:bg-indigo-500/15 hover:text-white flex items-center gap-2"
-                      onClick={() => selectFund(fund, 1)}
+                      onMouseDown={() => selectFund(fund, 1)}
                     >
                       <svg
                         className="w-4 h-4 shrink-0 text-slate-600"
@@ -612,6 +613,7 @@ export default function ComparePage() {
           </div>
         </div>
       )}
+
     </main>
   );
 }

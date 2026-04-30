@@ -29,6 +29,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Fund chat widget component for fund Q&A
 - Fund chat API route (OpenAI) with max 3 Hinglish bullets and a Bottom line verdict
 - Red Flag Detector on fund detail page (1Y/3Y negative returns, fund age < 3 years)
+- Portfolio holdings include a "Should I Exit?" AI verdict per fund
 
 ## Important Rules
 - Always use "use client" for interactive components

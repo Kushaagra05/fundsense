@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type FundListItem = {
@@ -47,6 +47,11 @@ export default function Portfolio() {
   const [isAdding, setIsAdding] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [exitCheckId, setExitCheckId] = useState<string | null>(null);
+  const [exitCheckReply, setExitCheckReply] = useState<string>("");
+  const [exitCheckLoading, setExitCheckLoading] = useState(false);
+  const [exitCheckError, setExitCheckError] = useState<string | null>(null);
+  const exitCheckIdRef = useRef<string | null>(null);
 
   const fetchNavsForEntries = useCallback(async (entries: PortfolioEntry[]) => {
     if (entries.length === 0) return;
@@ -364,6 +369,74 @@ export default function Portfolio() {
     setPortfolio((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const buildExitPrompt = (item: PortfolioEntry, currentNav: number | null, gainPct: number | null, daysHeld: number | null) => {
+    const currentNavText = currentNav !== null ? `₹${currentNav.toFixed(4)}` : "N/A";
+    const gainPctText = gainPct !== null && Number.isFinite(gainPct) ? `${gainPct.toFixed(2)}%` : "N/A";
+    const daysHeldText = daysHeld !== null ? `${daysHeld} days` : "N/A";
+
+    return [
+      "Give a clear, one-line Hinglish verdict only. No story, no extra context.",
+      "Start with one of: Hold, Exit, Switch. Example: 'Hold karo - long term theek hai'.",
+      `Fund: ${item.name}`,
+      `Buy NAV: ₹${item.buyNav.toFixed(4)}`,
+      `Current NAV: ${currentNavText}`,
+      `Gain/Loss %: ${gainPctText}`,
+      `Days held: ${daysHeldText}`,
+    ].join("\n");
+  };
+
+  const handleExitCheck = async (item: PortfolioEntry, currentNav: number | null, gainPct: number | null) => {
+    if (exitCheckId === item.id) {
+      setExitCheckId(null);
+      setExitCheckReply("");
+      setExitCheckError(null);
+      setExitCheckLoading(false);
+      exitCheckIdRef.current = null;
+      return;
+    }
+
+    const today = new Date();
+    const investDate = new Date(item.date);
+    const daysHeld = Number.isNaN(investDate.getTime())
+      ? null
+      : Math.max(0, Math.floor((today.getTime() - investDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+    const prompt = buildExitPrompt(item, currentNav, gainPct, daysHeld);
+    exitCheckIdRef.current = item.id;
+    setExitCheckId(item.id);
+    setExitCheckReply("");
+    setExitCheckError(null);
+    setExitCheckLoading(true);
+
+    try {
+      const res = await fetch("/api/fund-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+      const data = (await res.json()) as { reply?: string };
+      const rawReply = data.reply?.trim() || "";
+      const lines = rawReply.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const bottomLine = lines.find((line) => line.toLowerCase().startsWith("bottom line:"));
+      const verdictLine = (bottomLine || lines[0] || "").replace(/^bottom line:\s*/i, "");
+      const verdict = verdictLine.length > 0 ? verdictLine : "Response unavailable.";
+
+      if (exitCheckIdRef.current === item.id) {
+        setExitCheckReply(verdict);
+      }
+    } catch {
+      if (exitCheckIdRef.current === item.id) {
+        setExitCheckError("AI response abhi available nahi hai.");
+      }
+    } finally {
+      if (exitCheckIdRef.current === item.id) {
+        setExitCheckLoading(false);
+      }
+    }
+  };
+
   const SearchDropdown = ({ funds }: { funds: FundListItem[] }) => (
     <div className={`${showDropdown ? "" : "hidden"} absolute left-0 right-0 top-full mt-2 rounded-xl border border-white/[0.08] bg-slate-800/95 backdrop-blur-xl shadow-xl overflow-hidden z-[9999]`}>
       <ul className="list-none m-0 p-1.5 max-h-[250px] overflow-y-auto">
@@ -561,22 +634,48 @@ export default function Portfolio() {
                     const gainClass = hasCurNav && gain > 0 ? "text-emerald-400" : hasCurNav && gain < 0 ? "text-red-400" : "text-slate-400";
                     const gainSign = hasCurNav && gain > 0 ? "+" : "";
                     return (
-                      <tr key={item.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 px-6"><p className="text-sm font-semibold text-slate-200 line-clamp-1" title={item.name}>{item.name}</p><p className="text-xs text-slate-500 mt-1">{item.date}</p></td>
-                        <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">{item.units.toFixed(3)}</td>
-                        <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">₹{item.buyNav.toFixed(4)}</td>
-                        <td className="py-4 px-4 text-right text-sm font-semibold text-slate-200">{formatCurrency(invested)}</td>
-                        <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">{hasCurNav && item.curNav ? `₹${item.curNav.toFixed(4)}` : "—"}</td>
-                        <td className="py-4 px-4 text-right text-sm font-semibold text-white">{hasCurNav ? formatCurrency(current) : "—"}</td>
-                        <td className={`py-4 px-4 text-right text-sm font-bold ${gainClass}`}>
-                          {hasCurNav ? (<>{gainSign}{formatCurrency(gain)}<br /><span className="text-xs font-medium opacity-80">{gainSign}{gainPct.toFixed(2)}%</span></>) : "—"}
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <button onClick={() => handleDelete(item.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-colors mx-auto cursor-pointer" type="button">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                          </button>
-                        </td>
-                      </tr>
+                      <Fragment key={item.id}>
+                        <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 px-6"><p className="text-sm font-semibold text-slate-200 line-clamp-1" title={item.name}>{item.name}</p><p className="text-xs text-slate-500 mt-1">{item.date}</p></td>
+                          <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">{item.units.toFixed(3)}</td>
+                          <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">₹{item.buyNav.toFixed(4)}</td>
+                          <td className="py-4 px-4 text-right text-sm font-semibold text-slate-200">{formatCurrency(invested)}</td>
+                          <td className="py-4 px-4 text-right text-sm text-slate-300 font-mono">{hasCurNav && item.curNav ? `₹${item.curNav.toFixed(4)}` : "—"}</td>
+                          <td className="py-4 px-4 text-right text-sm font-semibold text-white">{hasCurNav ? formatCurrency(current) : "—"}</td>
+                          <td className={`py-4 px-4 text-right text-sm font-bold ${gainClass}`}>
+                            {hasCurNav ? (<>{gainSign}{formatCurrency(gain)}<br /><span className="text-xs font-medium opacity-80">{gainSign}{gainPct.toFixed(2)}%</span></>) : "—"}
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <button
+                                onClick={() => handleExitCheck(item, hasCurNav ? item.curNav : null, hasCurNav ? gainPct : null)}
+                                className="px-2.5 py-1 text-[11px] font-semibold text-amber-300 border border-amber-400/50 rounded-md hover:bg-amber-400/10 transition-colors"
+                                type="button"
+                              >
+                                Should I Exit?
+                              </button>
+                              <button onClick={() => handleDelete(item.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-colors mx-auto cursor-pointer" type="button">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {exitCheckId === item.id && (
+                          <tr className="border-b border-white/[0.04]">
+                            <td colSpan={8} className="px-6 pb-4">
+                              <div className="bg-slate-800/70 border border-amber-400/20 rounded-xl p-4 text-sm text-slate-200">
+                                {exitCheckLoading ? (
+                                  <span className="text-slate-400">AI is thinking...</span>
+                                ) : exitCheckError ? (
+                                  <span className="text-amber-200">{exitCheckError}</span>
+                                ) : (
+                                  <span>{exitCheckReply}</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
