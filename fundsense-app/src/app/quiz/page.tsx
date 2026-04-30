@@ -13,6 +13,11 @@ type QuizQuestion = {
   options: QuizOption[];
 };
 
+type FundListItem = {
+  schemeCode: number;
+  schemeName: string;
+};
+
 type Recommendation = {
   title: string;
   desc: string;
@@ -79,6 +84,13 @@ export default function Quiz() {
   const [isFading, setIsFading] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultVisible, setResultVisible] = useState(false);
+  const [answers, setAnswers] = useState<string[]>([]);
+  const [sipBudget, setSipBudget] = useState("");
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
+  const [recReply, setRecReply] = useState("");
+  const [topFunds, setTopFunds] = useState<FundListItem[]>([]);
+  const [topFundsMessage, setTopFundsMessage] = useState("");
 
   useEffect(() => {
     document.body.style.overflow = "auto";
@@ -144,6 +156,11 @@ export default function Quiz() {
     if (isFading) return;
     setIsFading(true);
     setTotalScore((prev) => prev + points);
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[currentQuestion] = current.options.find((opt) => opt.points === points)?.text ?? "";
+      return next;
+    });
 
     setTimeout(() => {
       if (currentQuestion + 1 < questions.length) {
@@ -161,9 +178,157 @@ export default function Quiz() {
     setTimeout(() => {
       setCurrentQuestion(0);
       setTotalScore(0);
+      setAnswers([]);
+      setSipBudget("");
+      setRecReply("");
+      setRecError(null);
+      setRecLoading(false);
       setIsFading(false);
     }, 300);
   };
+
+  const buildRecommendationPrompt = () => {
+    const goal = answers[0] || "N/A";
+    const horizon = answers[1] || "N/A";
+    const riskDrop = answers[2] || "N/A";
+    const income = answers[3] || "N/A";
+    const riskPct = answers[4] || "N/A";
+
+    return [
+      "Give a concise recommendation in Hinglish.",
+      "Use max 3 bullet points and a final Bottom line (one line).",
+      "Include: best fund category, suggested monthly SIP amount based on budget, 2-3 example fund names, and a one-line verdict.",
+      `Risk profile: ${resultConfig.type}`,
+      `Investment goal: ${goal}`,
+      `Investment horizon: ${horizon}`,
+      `Risk tolerance behavior: ${riskDrop}`,
+      `Monthly income: ${income}`,
+      `Riskable savings: ${riskPct}`,
+      `User SIP budget: ₹${sipBudget}`,
+    ].join("\n");
+  };
+
+  const handleRecommendation = async () => {
+    if (!sipBudget || recLoading) return;
+    setRecLoading(true);
+    setRecError(null);
+    setRecReply("");
+
+    try {
+      const res = await fetch("/api/fund-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: buildRecommendationPrompt() }] }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+      const data = (await res.json()) as { reply?: string };
+      const reply = data.reply?.trim() || "";
+      setRecReply(reply || "Response unavailable.");
+    } catch {
+      setRecError("AI response abhi available nahi hai.");
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
+  const extractCategory = (reply: string) => {
+    const categories = [
+      "Large Cap",
+      "Large & Mid",
+      "Flexi Cap",
+      "Mid Cap",
+      "Small Cap",
+      "ELSS",
+      "Hybrid",
+      "Debt",
+      "Liquid",
+      "Sectoral",
+      "Index",
+      "Contra",
+      "Value",
+    ];
+    const lines = reply.split(/\r?\n/).map((line) => line.replace(/^•\s*/, "").trim());
+    for (const line of lines) {
+      for (const category of categories) {
+        if (line.toLowerCase().includes(category.toLowerCase())) {
+          return category;
+        }
+      }
+    }
+    return "";
+  };
+
+  useEffect(() => {
+    const category = extractCategory(recReply);
+    if (!category) {
+      setTopFunds([]);
+      setTopFundsMessage("");
+      return;
+    }
+
+    let isActive = true;
+    const fetchTopFunds = async () => {
+      try {
+        setTopFundsMessage("");
+        const res = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(category)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data?.data ?? [];
+        const candidates = items.slice(0, 12) as FundListItem[];
+
+        const validFunds: FundListItem[] = [];
+        await Promise.all(
+          candidates.map(async (fund) => {
+            if (!isActive) return;
+            const name = fund.schemeName || "";
+            const lower = name.toLowerCase();
+            if (!lower.includes("direct") || !lower.includes("growth")) return;
+            if (/(dividend|idcw|weekly|monthly|quarterly)/i.test(lower)) return;
+
+            try {
+              const detailRes = await fetch(`https://api.mfapi.in/mf/${fund.schemeCode}`);
+              if (!detailRes.ok) return;
+              const detail = await detailRes.json();
+              const navText = detail?.data?.[0]?.nav;
+              const navDate = detail?.data?.[0]?.date;
+              const navValue = navText ? parseFloat(navText) : 0;
+              if (!navValue || navValue <= 0) return;
+
+              if (typeof navDate === "string") {
+                const parts = navDate.split("-");
+                const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+                if (!year || year < 2023) return;
+              } else {
+                return;
+              }
+
+              if (isActive) validFunds.push(fund);
+            } catch {
+              return;
+            }
+          })
+        );
+
+        const finalFunds = validFunds.slice(0, 3);
+        if (!isActive) return;
+        setTopFunds(finalFunds);
+        if (finalFunds.length === 0) {
+          setTopFundsMessage("Koi accha fund nahi mila, please search manually");
+        }
+      } catch {
+        if (isActive) {
+          setTopFunds([]);
+          setTopFundsMessage("");
+        }
+      }
+    };
+
+    fetchTopFunds();
+    return () => {
+      isActive = false;
+    };
+  }, [recReply]);
 
   const current = questions[currentQuestion];
 
@@ -314,6 +479,60 @@ export default function Quiz() {
             <p className="text-slate-300 text-base max-w-lg mx-auto leading-relaxed">{resultConfig.desc}</p>
           </div>
 
+          <div className="bg-slate-800/40 border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-8">
+            <h3 className="text-lg font-bold text-white mb-3">Your Personalized Fund Recommendation</h3>
+            <p className="text-slate-400 text-sm mb-5">Enter your monthly SIP budget to get a focused recommendation.</p>
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+              <input
+                type="number"
+                min="0"
+                placeholder="Monthly SIP budget (₹)"
+                value={sipBudget}
+                onChange={(e) => setSipBudget(e.target.value)}
+                className="flex-1 bg-slate-900/70 border border-white/[0.08] rounded-xl text-sm text-slate-100 px-4 py-3 outline-none focus:border-indigo-500/50"
+              />
+              <button
+                type="button"
+                onClick={handleRecommendation}
+                disabled={!sipBudget || recLoading}
+                className="px-5 py-3 text-sm font-semibold text-white bg-indigo-500/80 rounded-xl hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {recLoading ? "Generating..." : "Get Recommendation"}
+              </button>
+            </div>
+            <div className="mt-4">
+              {recError && <p className="text-xs text-red-400">{recError}</p>}
+              {recReply && (
+                <div className="mt-3 bg-slate-900/60 border border-white/[0.06] rounded-xl p-4 text-sm text-slate-200 whitespace-pre-line">
+                  {recReply}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {recReply && (topFunds.length > 0 || topFundsMessage) && (
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-white mb-4">Top Funds in This Category</h3>
+              {topFunds.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {topFunds.map((fund) => (
+                    <div key={fund.schemeCode} className="bg-slate-800/40 border border-white/[0.04] p-5 rounded-xl">
+                      <p className="text-sm font-semibold text-slate-100 mb-3 line-clamp-2">{fund.schemeName}</p>
+                      <Link
+                        href={`/fund/${fund.schemeCode}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-300 hover:text-indigo-200 transition-colors no-underline"
+                      >
+                        View Fund →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-amber-200">{topFundsMessage}</p>
+              )}
+            </div>
+          )}
+
           <h3 className="text-lg font-bold text-white mb-5 pl-2 flex items-center gap-2">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -341,12 +560,6 @@ export default function Quiz() {
             >
               Retake Quiz
             </button>
-            <Link
-              href="/"
-              className="w-full sm:w-auto px-6 py-3.5 text-[15px] font-semibold text-white gradient-btn border-none rounded-xl hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.45)] transition-all text-center no-underline block"
-            >
-              Find these funds
-            </Link>
           </div>
         </div>
       </main>

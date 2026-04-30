@@ -17,6 +17,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - /compare → Side by side fund comparison with winner highlights and verdict
 - /sip → SIP Calculator with live sliders and year breakdown table
 - /quiz → Risk profiler quiz with 5 questions and investor profile result
+- /quiz → Personalized fund recommendation card + filtered top funds by AI category (Direct Growth, recent NAV)
 - /portfolio → Portfolio tracker with Simple Mode (amount+date only) 
   and Advanced Mode (units+NAV). Auto fetches historical NAV in Simple Mode.
 
