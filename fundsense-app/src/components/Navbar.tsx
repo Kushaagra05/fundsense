@@ -56,7 +56,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden sm:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href} className="text-white no-underline text-sm font-medium hover:text-slate-300 transition-colors">
               {link.label}
@@ -80,7 +80,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile right side */}
-        <div className="flex sm:hidden items-center gap-3">
+        <div className="flex md:hidden items-center gap-3">
           {!userEmail && (
             <Link href="/auth" className="px-3 py-1.5 text-xs font-semibold text-white bg-slate-800/60 border border-white/[0.08] rounded-lg">
               Login
