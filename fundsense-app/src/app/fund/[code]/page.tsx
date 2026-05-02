@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import FundChatWidget from '@/components/FundChatWidget';
 import Navbar from '@/components/Navbar';
+import { supabase } from '@/lib/supabase';
 
 type NavData = {
   date: string;
@@ -24,6 +25,13 @@ type FundDetails = {
   data: NavData[];
   status: string;
 };
+
+type WatchlistItem = {
+  code: number;
+  name: string;
+};
+
+const WATCHLIST_STORAGE_KEY = 'fundsense_watchlist';
 
 // ── Parse dd-mm-yyyy date ──
 function parseDate(dateStr: string) {
@@ -110,6 +118,9 @@ export default function FundDetail() {
   const [fund, setFund] = useState<FundDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
+  const [watchlistBusy, setWatchlistBusy] = useState(false);
 
 
 
@@ -142,6 +153,129 @@ export default function FundDetail() {
 
     fetchFundDetails();
   }, [code]);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUserId(data.user?.id ?? null);
+    };
+    initAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!fund) return;
+
+    const checkWatchlist = async () => {
+      const fundCode = Number(fund.meta.scheme_code);
+      if (Number.isNaN(fundCode)) {
+        setIsInWatchlist(false);
+        return;
+      }
+
+      if (userId) {
+        const { data, error: wlError } = await supabase
+          .from('watchlist')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('code', fundCode)
+          .limit(1);
+
+        if (wlError) {
+          setIsInWatchlist(false);
+          return;
+        }
+
+        setIsInWatchlist((data?.length ?? 0) > 0);
+        return;
+      }
+
+      const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+      if (!raw) {
+        setIsInWatchlist(false);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(raw) as WatchlistItem[];
+        setIsInWatchlist(parsed.some((item) => Number(item.code) === fundCode));
+      } catch {
+        setIsInWatchlist(false);
+      }
+    };
+
+    checkWatchlist();
+  }, [fund, userId]);
+
+  const handleToggleWatchlist = async () => {
+    if (!fund || watchlistBusy) return;
+
+    const fundCode = Number(fund.meta.scheme_code);
+    if (Number.isNaN(fundCode)) return;
+
+    const fundName = fund.meta.scheme_name;
+    setWatchlistBusy(true);
+
+    try {
+      if (userId) {
+        if (isInWatchlist) {
+          const { error: deleteError } = await supabase
+            .from('watchlist')
+            .delete()
+            .eq('user_id', userId)
+            .eq('code', fundCode);
+
+          if (deleteError) {
+            alert(deleteError.message);
+            return;
+          }
+
+          setIsInWatchlist(false);
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from('watchlist')
+          .insert({
+            user_id: userId,
+            code: fundCode,
+            name: fundName,
+          });
+
+        if (insertError) {
+          alert(insertError.message);
+          return;
+        }
+
+        setIsInWatchlist(true);
+        return;
+      }
+
+      const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+      let parsed: WatchlistItem[] = [];
+      if (raw) {
+        try {
+          parsed = JSON.parse(raw) as WatchlistItem[];
+        } catch {
+          parsed = [];
+        }
+      }
+
+      const exists = parsed.some((item) => Number(item.code) === fundCode);
+      let updated: WatchlistItem[];
+
+      if (exists) {
+        updated = parsed.filter((item) => Number(item.code) !== fundCode);
+        setIsInWatchlist(false);
+      } else {
+        updated = [...parsed, { code: fundCode, name: fundName }];
+        setIsInWatchlist(true);
+      }
+
+      localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(updated));
+    } finally {
+      setWatchlistBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -266,9 +400,23 @@ export default function FundDetail() {
           <span className="text-slate-600 text-xs mx-1">/</span>
           <span className="text-slate-400 text-xs">{meta.scheme_name.substring(0, 40)}{meta.scheme_name.length > 40 ? '...' : ''}</span>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mt-4 mb-3 leading-tight tracking-tight">
-            {meta.scheme_name}
-          </h1>
+          <div className="mt-4 mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight tracking-tight sm:pr-6">
+              {meta.scheme_name}
+            </h1>
+            <button
+              type="button"
+              onClick={handleToggleWatchlist}
+              disabled={watchlistBusy}
+              className={`shrink-0 px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                isInWatchlist
+                  ? 'bg-red-500/10 text-red-300 border-red-500/40 hover:bg-red-500/15'
+                  : 'bg-slate-800/70 text-slate-200 border-white/[0.12] hover:bg-slate-700/70'
+              } disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              {watchlistBusy ? 'Updating...' : isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            </button>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <span className={`px-3 py-1 text-xs font-semibold rounded-full ${risk.classes}`}>

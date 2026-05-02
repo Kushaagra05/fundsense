@@ -30,7 +30,78 @@ type Summary = {
   gainSign: string;
 };
 
+type WatchlistEntry = {
+  id: string;
+  code: number;
+  name: string;
+  createdAt: string;
+};
+
+type WatchlistStats = WatchlistEntry & {
+  currentNav: number | null;
+  return1y: number | null;
+  return3y: number | null;
+};
+
 const STORAGE_KEY = "fundsense_portfolio";
+const WATCHLIST_STORAGE_KEY = "fundsense_watchlist";
+
+function parseDate(dateStr: string) {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+}
+
+function findClosestNav(navData: { date: string; nav: string }[], targetDate: Date) {
+  let closest = null;
+  let minDiff = Infinity;
+
+  for (let i = 0; i < navData.length; i++) {
+    const d = parseDate(navData[i].date);
+    if (!d) continue;
+    const diff = Math.abs(d.getTime() - targetDate.getTime());
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = parseFloat(navData[i].nav);
+    }
+    if (d < targetDate && diff > minDiff) break;
+  }
+
+  if (minDiff > 15 * 24 * 60 * 60 * 1000) return null;
+  return closest;
+}
+
+function calcReturn(navData: { date: string; nav: string }[], days: number) {
+  if (!navData || navData.length < 2) return null;
+
+  const latestNav = parseFloat(navData[0].nav);
+  const latestDate = parseDate(navData[0].date);
+  if (!latestDate) return null;
+
+  const targetDate = new Date(latestDate);
+  targetDate.setDate(targetDate.getDate() - days);
+
+  const pastNav = findClosestNav(navData, targetDate);
+  if (!pastNav) return null;
+
+  return ((latestNav - pastNav) / pastNav) * 100;
+}
+
+function calcCAGR(navData: { date: string; nav: string }[], years: number) {
+  if (!navData || navData.length < 2) return null;
+
+  const latestNav = parseFloat(navData[0].nav);
+  const latestDate = parseDate(navData[0].date);
+  if (!latestDate) return null;
+
+  const targetDate = new Date(latestDate);
+  targetDate.setFullYear(targetDate.getFullYear() - years);
+
+  const pastNav = findClosestNav(navData, targetDate);
+  if (!pastNav) return null;
+
+  return (Math.pow(latestNav / pastNav, 1 / years) - 1) * 100;
+}
 
 export default function Portfolio() {
   const [allFunds, setAllFunds] = useState<FundListItem[]>([]);
@@ -44,6 +115,9 @@ export default function Portfolio() {
   const [searchPlaceholder, setSearchPlaceholder] = useState("Search fund name...");
   const [showDropdown, setShowDropdown] = useState(false);
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [watchlistStats, setWatchlistStats] = useState<WatchlistStats[]>([]);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
   const [isLoadingNavs, setIsLoadingNavs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -90,6 +164,12 @@ export default function Portfolio() {
       if (user) {
         setUserId(user.id);
         const { data: rows } = await supabase.from("portfolios").select("*").eq("user_id", user.id);
+        const { data: watchlistRows } = await supabase
+          .from("watchlist")
+          .select("id, code, name, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
         if (rows && rows.length > 0) {
           const mapped = rows.map((row: any) => ({
             id: String(row.id),
@@ -103,6 +183,19 @@ export default function Portfolio() {
           setPortfolio(mapped);
           fetchNavsForEntries(mapped);
         }
+
+        if (watchlistRows && watchlistRows.length > 0) {
+          const mappedWatchlist = watchlistRows.map((row: any) => ({
+            id: String(row.id),
+            code: Number(row.code),
+            name: String(row.name ?? "Unnamed Fund"),
+            createdAt: String(row.created_at ?? ""),
+          })) as WatchlistEntry[];
+          setWatchlist(mappedWatchlist);
+        } else {
+          setWatchlist([]);
+        }
+
         hasLoadedRef.current = true;
         setAuthChecked(true);
         return;
@@ -120,6 +213,25 @@ export default function Portfolio() {
           setPortfolio([]);
         }
       }
+
+      const storedWatchlist = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+      if (storedWatchlist) {
+        try {
+          const parsed = JSON.parse(storedWatchlist) as Array<{ code: number; name: string }>;
+          const normalized = parsed.map((item, index) => ({
+            id: `local-${item.code}-${index}`,
+            code: Number(item.code),
+            name: String(item.name),
+            createdAt: "",
+          }));
+          setWatchlist(normalized);
+        } catch {
+          setWatchlist([]);
+        }
+      } else {
+        setWatchlist([]);
+      }
+
       hasLoadedRef.current = true;
       setAuthChecked(true);
     };
@@ -213,6 +325,47 @@ export default function Portfolio() {
     if (!hasMissingNav) return;
     fetchNavsForEntries(portfolio);
   }, [fetchNavsForEntries, portfolio]);
+
+  useEffect(() => {
+    const fetchWatchlistStats = async () => {
+      if (watchlist.length === 0) {
+        setWatchlistStats([]);
+        setWatchlistLoading(false);
+        return;
+      }
+
+      setWatchlistLoading(true);
+      const updated = await Promise.all(
+        watchlist.map(async (item) => {
+          try {
+            const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
+            if (!res.ok) throw new Error("NAV error");
+            const data = await res.json();
+            const navData = data?.data || [];
+            const currentNav = navData.length > 0 ? parseFloat(navData[0].nav) : null;
+            return {
+              ...item,
+              currentNav,
+              return1y: calcReturn(navData, 365),
+              return3y: calcCAGR(navData, 3),
+            };
+          } catch {
+            return {
+              ...item,
+              currentNav: null,
+              return1y: null,
+              return3y: null,
+            };
+          }
+        })
+      );
+
+      setWatchlistStats(updated);
+      setWatchlistLoading(false);
+    };
+
+    fetchWatchlistStats();
+  }, [watchlist]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -368,6 +521,23 @@ export default function Portfolio() {
       await supabase.from("portfolios").delete().eq("id", id).eq("user_id", userId);
     }
     setPortfolio((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleRemoveFromWatchlist = async (item: WatchlistEntry) => {
+    if (userId) {
+      await supabase.from("watchlist").delete().eq("id", item.id).eq("user_id", userId);
+      setWatchlist((prev) => prev.filter((entry) => entry.id !== item.id));
+      setWatchlistStats((prev) => prev.filter((entry) => entry.id !== item.id));
+      return;
+    }
+
+    setWatchlist((prev) => {
+      const updated = prev.filter((entry) => entry.code !== item.code);
+      const guestPayload = updated.map((entry) => ({ code: entry.code, name: entry.name }));
+      localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(guestPayload));
+      return updated;
+    });
+    setWatchlistStats((prev) => prev.filter((entry) => entry.code !== item.code));
   };
 
   const buildExitPrompt = (item: PortfolioEntry, currentNav: number | null, gainPct: number | null, daysHeld: number | null) => {
@@ -734,6 +904,111 @@ export default function Portfolio() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-10 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <h3 className="text-xl font-bold text-white">Watchlist</h3>
+            <span className="text-xs font-medium text-slate-400 bg-slate-800/60 border border-white/[0.08] rounded-full px-3 py-1">
+              {watchlist.length} saved
+            </span>
+          </div>
+
+          {watchlistLoading && watchlistStats.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: Math.max(1, Math.min(3, watchlist.length || 3)) }).map((_, index) => (
+                <div key={index} className="bg-slate-800/60 border border-white/[0.08] rounded-xl p-4 animate-pulse">
+                  <div className="h-4 w-3/4 rounded bg-slate-700/80 mb-4"></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
+                      <div className="h-2.5 w-16 rounded bg-slate-700/70 mb-2"></div>
+                      <div className="h-4 w-20 rounded bg-slate-700/70"></div>
+                    </div>
+                    <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
+                      <div className="h-2.5 w-12 rounded bg-slate-700/70 mb-2"></div>
+                      <div className="h-4 w-16 rounded bg-slate-700/70"></div>
+                    </div>
+                    <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2 col-span-2">
+                      <div className="h-2.5 w-14 rounded bg-slate-700/70 mb-2"></div>
+                      <div className="h-4 w-18 rounded bg-slate-700/70"></div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <div className="h-8 w-24 rounded-lg bg-slate-700/70"></div>
+                    <div className="h-8 w-16 rounded-lg bg-slate-700/70"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : watchlist.length === 0 ? (
+            <div className="rounded-xl border border-white/[0.06] bg-slate-800/40 px-4 py-6 text-center">
+              <p className="text-sm text-slate-400">No funds in watchlist yet. Open any fund page and tap Add to Watchlist.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {watchlistStats.length > 0 ? watchlistStats.map((item) => {
+                const return1yClass = item.return1y === null ? "text-slate-400" : item.return1y >= 0 ? "text-emerald-400" : "text-red-400";
+                const return1ySign = item.return1y !== null && item.return1y > 0 ? "+" : "";
+                const currentNavText = item.currentNav !== null ? `₹${item.currentNav.toFixed(4)}` : "N/A";
+                const return1yText = item.return1y === null ? "N/A" : `${return1ySign}${item.return1y.toFixed(2)}%`;
+                const return3yText = item.return3y === null ? "N/A" : `${item.return3y >= 0 ? "+" : ""}${item.return3y.toFixed(2)}%`;
+
+                return (
+                  <div key={item.id} className="bg-slate-800/60 border border-white/[0.08] rounded-xl p-4 flex flex-col gap-4">
+                    <p className="text-sm font-semibold text-slate-100 leading-6 line-clamp-2" title={item.name}>{item.name}</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Current NAV</p>
+                        <p className="mt-1 font-semibold text-slate-100">{currentNavText}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">1Y return</p>
+                        <p className={`mt-1 font-semibold ${return1yClass}`}>{return1yText}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2 col-span-2">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">3Y CAGR</p>
+                        <p className="mt-1 font-semibold text-slate-100">{return3yText}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Link
+                        href={`/fund/${item.code}`}
+                        className="text-sm font-semibold text-indigo-300 hover:text-indigo-200 transition-colors"
+                      >
+                        View Fund →
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFromWatchlist(item)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-500/35 bg-red-500/10 text-red-300 hover:bg-red-500/15 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              }) : watchlist.map((item) => (
+                <div key={item.id} className="bg-slate-800/60 border border-white/[0.08] rounded-xl p-4 flex flex-col gap-4">
+                  <p className="text-sm font-semibold text-slate-100 leading-6 line-clamp-2" title={item.name}>{item.name}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <Link
+                      href={`/fund/${item.code}`}
+                      className="text-sm font-semibold text-indigo-300 hover:text-indigo-200 transition-colors"
+                    >
+                      View Fund →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFromWatchlist(item)}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-500/35 bg-red-500/10 text-red-300 hover:bg-red-500/15 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
