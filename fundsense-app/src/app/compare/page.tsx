@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 
 interface FundListItem {
   schemeCode: number;
@@ -340,7 +341,9 @@ export default function ComparePage() {
   };
 
   return (
-    <main className="relative z-[1] pt-[100px] pb-20 px-4 sm:px-6 max-w-6xl mx-auto">
+    <>
+      <Navbar />
+      <main className="relative z-[1] pt-[100px] pb-20 px-4 sm:px-6 max-w-6xl mx-auto">
       {/* Ambient background glow */}
       <div className="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(99,102,241,0.15)_0%,transparent_70%)] rounded-full pointer-events-none z-0"></div>
       <div className="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(14,165,233,0.12)_0%,transparent_70%)] rounded-full pointer-events-none z-0"></div>
@@ -614,6 +617,7 @@ export default function ComparePage() {
         </div>
       )}
 
-    </main>
+      </main>
+    </>
   );
 }

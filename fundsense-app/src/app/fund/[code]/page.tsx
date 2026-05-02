@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import FundChatWidget from '@/components/FundChatWidget';
+import Navbar from '@/components/Navbar';
 
 type NavData = {
   date: string;
@@ -144,38 +145,44 @@ export default function FundDetail() {
 
   if (loading) {
     return (
-      <main className="relative z-[1] pt-[100px] pb-20 px-6 max-w-4xl mx-auto min-h-screen">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <svg className="animate-spin w-10 h-10" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="#334155" strokeWidth="3" />
-            <path d="M12 2a10 10 0 0 1 10 10" stroke="#818cf8" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-          <p className="text-slate-400 text-sm font-medium">Fetching fund details...</p>
-        </div>
-      </main>
+      <>
+        <Navbar />
+        <main className="relative z-[1] pt-[100px] pb-20 px-6 max-w-4xl mx-auto min-h-screen">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+            <svg className="animate-spin w-10 h-10" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#334155" strokeWidth="3" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="#818cf8" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+            <p className="text-slate-400 text-sm font-medium">Fetching fund details...</p>
+          </div>
+        </main>
+      </>
     );
   }
 
   if (error || !fund) {
     return (
-      <main className="relative z-[1] pt-[100px] pb-20 px-6 max-w-4xl mx-auto min-h-screen">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
+      <>
+        <Navbar />
+        <main className="relative z-[1] pt-[100px] pb-20 px-6 max-w-4xl mx-auto min-h-screen">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Fund Not Found</h2>
+              <p className="text-slate-400 text-sm max-w-md">{error || 'Unknown error'}</p>
+            </div>
+            <Link href="/" className="mt-2 px-6 py-2.5 text-sm font-semibold text-white gradient-btn rounded-lg no-underline transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(99,102,241,0.4)]">
+              ← Search Again
+            </Link>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white mb-2">Fund Not Found</h2>
-            <p className="text-slate-400 text-sm max-w-md">{error || 'Unknown error'}</p>
-          </div>
-          <Link href="/" className="mt-2 px-6 py-2.5 text-sm font-semibold text-white gradient-btn rounded-lg no-underline transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(99,102,241,0.4)]">
-            ← Search Again
-          </Link>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
@@ -240,7 +247,9 @@ export default function FundDetail() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-900 relative pt-[100px] pb-20 px-6 max-w-4xl mx-auto">
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-slate-900 relative pt-[100px] pb-20 px-6 max-w-4xl mx-auto">
       {/* Ambient background glow */}
       <div className="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full pointer-events-none z-0"></div>
       <div className="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full pointer-events-none z-0"></div>
@@ -374,6 +383,7 @@ export default function FundDetail() {
         </div>
 
       </div>
-    </main>
+      </main>
+    </>
   );
 }

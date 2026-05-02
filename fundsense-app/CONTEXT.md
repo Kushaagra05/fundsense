@@ -42,6 +42,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Use onMouseDown instead of onClick for dropdown items to prevent 
   click outside handler from firing first
 - Use separate refs for each search wrapper when multiple exist on same page
+- Shared layout rule: use `src/components/Navbar.tsx` on app pages; avoid hardcoded per-page `<nav>` blocks and `body > nav { display: none }` overrides.
 
 ## Deployment Notes (Vercel)
 - CLI: npm i -g vercel, then vercel login

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/Navbar";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function AuthPage() {
 
   return (
     <>
+      <Navbar />
       <div className="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full pointer-events-none z-0"></div>
       <div className="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full pointer-events-none z-0"></div>
 

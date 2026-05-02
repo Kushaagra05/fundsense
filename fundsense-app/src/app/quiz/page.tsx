@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import Navbar from "@/components/Navbar";
 
 type QuizOption = {
   text: string;
@@ -334,80 +335,9 @@ export default function Quiz() {
 
   return (
     <>
-      <style jsx global>{`
-        .fade-out {
-          opacity: 0;
-          pointer-events: none;
-        }
-        .fade-in {
-          opacity: 1;
-          pointer-events: auto;
-        }
-        body > nav {
-          display: none;
-        }
-      `}</style>
-
+      <Navbar />
       <div className="fixed -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full pointer-events-none z-0"></div>
       <div className="fixed -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full pointer-events-none z-0"></div>
-
-      <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 sm:px-10 py-4 bg-slate-900/75 backdrop-blur-xl border-b border-white/[0.06]">
-        <Link href="/" className="flex items-center gap-2.5 cursor-pointer no-underline">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="shrink-0">
-            <rect width="32" height="32" rx="8" fill="url(#logoGrad)" />
-            <path
-              d="M9 22L13 13L17 17L23 9"
-              stroke="white"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="23" cy="9" r="2" fill="white" />
-            <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                <stop stopColor="#6366f1" />
-                <stop offset="1" stopColor="#0ea5e9" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <span className="text-[22px] font-extrabold tracking-tight gradient-text-logo">FundSense</span>
-        </Link>
-
-        <div className="flex items-center gap-6">
-          <Link
-            href="/portfolio"
-            className="text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200"
-          >
-            Portfolio
-          </Link>
-          <Link href="/quiz" className="text-indigo-400 no-underline text-sm font-medium">
-            Risk Quiz
-          </Link>
-          <Link
-            href="/sip"
-            className="text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200"
-          >
-            SIP Calculator
-          </Link>
-          <Link
-            href="/compare"
-            className="text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200"
-          >
-            Compare
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-slate-400 no-underline text-sm font-medium transition-colors duration-200 hover:text-slate-200"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-            <span className="hidden sm:inline">Back to Search</span>
-            <span className="sm:hidden">Back</span>
-          </Link>
-        </div>
-      </nav>
 
       <main className="relative z-[1] pt-[120px] pb-20 px-6 max-w-3xl mx-auto min-h-[80vh] flex flex-col justify-center">
         <div
