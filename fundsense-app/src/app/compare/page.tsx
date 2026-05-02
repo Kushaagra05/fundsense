@@ -263,23 +263,76 @@ export default function ComparePage() {
       };
 
       let verdict = "";
-      let score1 = (win_1m === 1 ? 1 : 0) + (win_1y === 1 ? 1 : 0) + (win_3y === 1 ? 1 : 0);
-      let score2 = (win_1m === 2 ? 1 : 0) + (win_1y === 2 ? 1 : 0) + (win_3y === 2 ? 1 : 0);
+      const name1 = d1.meta.scheme_name;
+      const name2 = d2.meta.scheme_name;
 
-      if (ret1m_1 === ret1m_2 && ret1y_1 === ret1y_2 && ret3y_1 === ret3y_2) {
-        verdict = `Both funds are equally matched in terms of returns. Consider looking at the risk profile and fund management.`;
-      } else if (score1 > score2 && win_3y === 1) {
-        verdict = `<strong>Fund A</strong> (${d1.meta.scheme_name}) shows stronger overall performance and better long-term returns.`;
-      } else if (score2 > score1 && win_3y === 2) {
-        verdict = `<strong>Fund B</strong> (${d2.meta.scheme_name}) shows stronger overall performance and better long-term returns.`;
-      } else if (win_risk === 1 && score1 >= score2) {
-        verdict = `<strong>Fund A</strong> is the better choice with lower risk and comparable or better returns.`;
-      } else if (win_risk === 2 && score2 >= score1) {
-        verdict = `<strong>Fund B</strong> is the better choice with lower risk and comparable or better returns.`;
-      } else if (score1 === score2 && score1 !== 0) {
-        verdict = `Both funds have very similar performance profiles. Consider checking the fund house and expense ratios.`;
+      // Priority 1: If one fund has positive 1Y and the other negative, the positive one wins
+      if (ret1y_1 !== null && ret1y_2 !== null && ((ret1y_1 > 0 && ret1y_2 < 0) || (ret1y_2 > 0 && ret1y_1 < 0))) {
+        if (ret1y_1 > 0 && ret1y_2 < 0) {
+          verdict = `<strong>${name1}</strong> (${name1}) has a positive 1Y return (${formatPct(ret1y_1)}) while ${name2} has a negative 1Y return (${formatPct(ret1y_2)}). Prefer ${name1} for better recent-year performance.`;
+        } else {
+          verdict = `<strong>${name2}</strong> (${name2}) has a positive 1Y return (${formatPct(ret1y_2)}) while ${name1} has a negative 1Y return (${formatPct(ret1y_1)}). Prefer ${name2} for better recent-year performance.`;
+        }
+
+      // Priority 2: If both 1Y are positive or both negative, compare 3Y CAGR
+      } else if (ret1y_1 !== null && ret1y_2 !== null && ((ret1y_1 >= 0 && ret1y_2 >= 0) || (ret1y_1 <= 0 && ret1y_2 <= 0))) {
+        if (ret3y_1 !== null && ret3y_2 !== null) {
+          if (Math.abs(ret3y_1 - ret3y_2) < 1e-6) {
+            // tied 3Y -> fallthrough to 1M
+            if (ret1m_1 !== null && ret1m_2 !== null) {
+              if (ret1m_1 > ret1m_2) {
+                verdict = `<strong>${name1}</strong> (${name1}) edges ahead on 1M return (${formatPct(ret1m_1)}) after tied 3Y performance.`;
+              } else if (ret1m_2 > ret1m_1) {
+                verdict = `<strong>${name2}</strong> (${name2}) edges ahead on 1M return (${formatPct(ret1m_2)}) after tied 3Y performance.`;
+              } else {
+                verdict = `Both funds show similar short- and long-term returns. Compare risk, expense ratio, and fund house.`;
+              }
+            } else {
+              verdict = `3Y performance is tied and 1M data is insufficient; compare risk and fees before choosing.`;
+            }
+          } else if (ret3y_1 > ret3y_2) {
+            verdict = `<strong>${name1}</strong> (${name1}) has higher 3Y CAGR (${formatPct(ret3y_1)}) vs ${formatPct(ret3y_2)} — prefer ${name1} for stronger long-term performance.`;
+          } else {
+            verdict = `<strong>${name2}</strong> (${name2}) has higher 3Y CAGR (${formatPct(ret3y_2)}) vs ${formatPct(ret3y_1)} — prefer ${name2} for stronger long-term performance.`;
+          }
+        } else {
+          // 3Y not available -> Priority 3
+          if (ret1m_1 !== null && ret1m_2 !== null) {
+            if (ret1m_1 > ret1m_2) {
+              verdict = `<strong>${name1}</strong> (${name1}) has higher 1M return (${formatPct(ret1m_1)}) — prefer ${name1} when 3Y is unavailable.`;
+            } else if (ret1m_2 > ret1m_1) {
+              verdict = `<strong>${name2}</strong> (${name2}) has higher 1M return (${formatPct(ret1m_2)}) — prefer ${name2} when 3Y is unavailable.`;
+            } else {
+              verdict = `Both funds have similar recent performance; check risk and fees before deciding.`;
+            }
+          } else {
+            verdict = `Insufficient comparable historical data (3Y and 1M unavailable). Compare risk, expense ratio, and fund house.`;
+          }
+        }
+
+      // Fallback when 1Y is missing for one or both funds
       } else {
-        verdict = score1 > score2 ? `<strong>Fund A</strong> has better short term performance, but verify long-term consistency.` : `<strong>Fund B</strong> has better short term performance, but verify long-term consistency.`;
+        if (ret3y_1 !== null && ret3y_2 !== null) {
+          if (Math.abs(ret3y_1 - ret3y_2) < 1e-6) {
+            if (ret1m_1 !== null && ret1m_2 !== null) {
+              if (ret1m_1 > ret1m_2) verdict = `<strong>${name1}</strong> (${name1}) has higher 1M return (${formatPct(ret1m_1)}).`;
+              else if (ret1m_2 > ret1m_1) verdict = `<strong>${name2}</strong> (${name2}) has higher 1M return (${formatPct(ret1m_2)}).`;
+              else verdict = `Both funds perform similarly; compare risk and fees.`;
+            } else {
+              verdict = `Long-term returns are similar and short-term data is limited; compare risk and costs.`;
+            }
+          } else if (ret3y_1 > ret3y_2) {
+            verdict = `<strong>${name1}</strong> (${name1}) has higher 3Y CAGR (${formatPct(ret3y_1)}).`;
+          } else {
+            verdict = `<strong>${name2}</strong> (${name2}) has higher 3Y CAGR (${formatPct(ret3y_2)}).`;
+          }
+        } else if (ret1m_1 !== null && ret1m_2 !== null) {
+          if (ret1m_1 > ret1m_2) verdict = `<strong>${name1}</strong> (${name1}) has higher 1M return (${formatPct(ret1m_1)}).`;
+          else if (ret1m_2 > ret1m_1) verdict = `<strong>${name2}</strong> (${name2}) has higher 1M return (${formatPct(ret1m_2)}).`;
+          else verdict = `Recent returns are similar; compare risk and fees.`;
+        } else {
+          verdict = `Unable to determine a clear winner due to missing data. Compare risk profile and expense ratio.`;
+        }
       }
 
       const w1 = d1.meta.scheme_name.toLowerCase().split(" ").slice(0, 5).join(" ");

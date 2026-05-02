@@ -44,6 +44,8 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Use separate refs for each search wrapper when multiple exist on same page
 - Shared layout rule: use `src/components/Navbar.tsx` on app pages; avoid hardcoded per-page `<nav>` blocks and `body > nav { display: none }` overrides.
 
+- Compare verdict priority: decide winner by this order — 1) If one fund's 1Y is positive and the other's is negative, the positive 1Y fund wins; 2) If both 1Y are same-sign, compare 3Y CAGR (higher wins); 3) If 3Y is tied or unavailable, compare 1M return (higher wins). Show fund name in verdict.
+
 ## Deployment Notes (Vercel)
 - CLI: npm i -g vercel, then vercel login
 - Link project from fundsense-app/ root with vercel
