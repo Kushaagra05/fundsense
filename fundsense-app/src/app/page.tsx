@@ -18,12 +18,9 @@ export default function Home() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  // Previously we hid document.body overflow and used an inner full-viewport
+  // scroll container which prevented the site-level footer from being reachable.
+  // Restore normal body scrolling so the footer (rendered in layout) is visible.
 
   useEffect(() => {
     async function fetchFunds() {
@@ -114,7 +111,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative z-[1] h-[100dvh] overflow-y-auto overflow-x-hidden flex flex-col items-center justify-start text-center pt-[120px] pb-20 px-6 box-border">
+    <main className="relative z-[1] min-h-screen flex flex-col items-center justify-start text-center pt-[120px] pb-20 px-6 box-border">
       <div className="absolute top-0 left-0 right-0 h-[100dvh] pointer-events-none overflow-hidden">
         <div className="absolute -top-[30%] -left-[10%] w-[600px] h-[600px] glow-indigo rounded-full z-0"></div>
         <div className="absolute -bottom-[20%] -right-[10%] w-[500px] h-[500px] glow-sky rounded-full z-0"></div>

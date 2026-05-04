@@ -38,6 +38,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Home feature cards now deep-link to section anchors like fund AI chat, red flags, health score, and holdings
 - Fund detail and portfolio pages now auto-scroll to hash targets on load using `window.location.hash` and a delayed `scrollIntoView` for `#ai-chat`, `#red-flag`, `#health-score`, and `#holdings`
  - Fund detail now includes a `Share` button next to the watchlist button. On mobile it uses the native `navigator.share` sheet; on desktop it copies the current fund URL to clipboard and shows a small toast "Link copied!" for 2 seconds.
+ - App now includes a site `Footer` component with logo/tagline, navigation links (Compare, Calculators, Risk Quiz, Portfolio, Auth), attribution (Built for Indian investors 🇮🇳, Data from MFAPI.in), and the legal line `© 2026 FundSense. Not a SEBI registered advisor.` The `Footer` is responsive and stacks on mobile.
 
 ## Important Rules
 - Always use "use client" for interactive components
