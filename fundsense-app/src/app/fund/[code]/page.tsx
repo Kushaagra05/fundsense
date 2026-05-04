@@ -295,7 +295,7 @@ export default function FundDetail() {
     const text = `Check out ${title} on FundSense — AI-powered mutual fund analyzer for Indian investors`;
 
     try {
-      if (navigator.share) {
+      if (typeof navigator !== 'undefined' && 'share' in navigator) {
         await (navigator as any).share({ title, text, url });
         return;
       }
