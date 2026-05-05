@@ -13,6 +13,15 @@ type BreakdownRow = {
 
 export default function SipCalculator() {
   const [activeTab, setActiveTab] = useState<"sip" | "tax">("sip");
+
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'tax') {
+      setActiveTab('tax');
+    }
+  }
+}, []);
   const [monthly, setMonthly] = useState(5000);
   const [durationYears, setDurationYears] = useState(10);
   const [annualReturn, setAnnualReturn] = useState(12);

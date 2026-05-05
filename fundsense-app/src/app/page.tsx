@@ -3,63 +3,39 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Fund = {
-  schemeCode: number;
-  schemeName: string;
-};
-
-export default function Home() {
-  const [allFunds, setAllFunds] = useState<Fund[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Fund[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+export default function HomePage() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [selectedFund, setSelectedFund] = useState<any | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [allFunds, setAllFunds] = useState<any[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Previously we hid document.body overflow and used an inner full-viewport
-  // scroll container which prevented the site-level footer from being reachable.
-  // Restore normal body scrolling so the footer (rendered in layout) is visible.
-
   useEffect(() => {
-    async function fetchFunds() {
-      try {
-        const res = await fetch('https://api.mfapi.in/mf');
-        if (!res.ok) throw new Error('API error');
-        const data = await res.json();
-        setAllFunds(data);
-      } catch (err) {
-        console.error('Failed to fetch funds:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchFunds();
+    // Simulate fetching funds
+    setIsLoading(true);
+    setTimeout(() => {
+      setAllFunds([
+        { schemeCode: 122639, schemeName: "Parag Parikh Flexi Cap Fund" },
+        { schemeCode: 118834, schemeName: "SBI Bluechip Fund" },
+        { schemeCode: 119551, schemeName: "HDFC Mid-Cap Opportunities Fund" },
+        { schemeCode: 125497, schemeName: "Axis Small Cap Fund" },
+      ]);
+      setIsLoading(false);
+    }, 500);
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!query || query.length < 2) {
+    if (!query) {
       setResults([]);
       return;
     }
-    const q = query.toLowerCase();
-    const matches = [];
-    for (let i = 0; i < allFunds.length && matches.length < 8; i++) {
-      if (allFunds[i].schemeName.toLowerCase().includes(q)) {
-        matches.push(allFunds[i]);
-      }
-    }
+    const matches = allFunds.filter(fund =>
+      fund.schemeName.toLowerCase().includes(query.toLowerCase())
+    );
     setResults(matches);
     setActiveIndex(-1);
   }, [query, allFunds]);
@@ -84,16 +60,14 @@ export default function Home() {
     }
   };
 
-  const selectFund = (fund: Fund) => {
+  const selectFund = (fund: any) => {
+    setSelectedFund(fund);
     setQuery(fund.schemeName);
     setShowDropdown(false);
-    // guard: ensure schemeCode exists before navigating
     if (!fund || !fund.schemeCode) {
-      console.warn('Attempted to navigate to fund with missing schemeCode:', fund);
       alert('Selected fund is missing a valid scheme code. Please try another result.');
       return;
     }
-    console.log('Navigating to fund code:', fund.schemeCode);
     router.push(`/fund/${fund.schemeCode}`);
   };
 
@@ -214,30 +188,31 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+          {/* Feature card data */}
           {[
             {
               emoji: '🤖',
               title: 'AI Fund Chat',
               subtitle: 'Fund ke baare mein kuch bhi poochiye',
-              href: '/fund/122639#ai-chat',
+              section: 'ai-chat',
             },
             {
               emoji: '🚨',
               title: 'Red Flag Detector',
               subtitle: 'Koi bhi fund ka risk 1 second mein pakad lijiye',
-              href: '/fund/122639#red-flag',
+              section: 'red-flag',
             },
             {
               emoji: '🏥',
               title: 'Portfolio Health Score',
               subtitle: 'Aapka portfolio kitna healthy hai? Check your score',
-              href: '/portfolio#health-score',
+              section: 'health-score',
             },
             {
               emoji: '🚪',
               title: 'Should I Exit?',
               subtitle: 'AI will tell — hold karna hai ya exit',
-              href: '/portfolio#holdings',
+              section: 'holdings',
             },
             {
               emoji: '🎯',
@@ -249,24 +224,28 @@ export default function Home() {
               emoji: '⚖️',
               title: 'Tax Calculator',
               subtitle: 'Redeem karne se pehle exact tax calculate kariye',
-              href: '/sip#tax',
+              href: '/sip?tab=tax',
             },
           ].map((feature) => (
-            <Link
+            <div
               key={feature.title}
-              href={feature.href}
-              onClick={(event) => {
-                if (feature.href.includes('#')) {
-                  event.preventDefault();
-                  window.location.assign(feature.href);
+              onClick={() => {
+                const t = Date.now();
+                if (feature.section === 'ai-chat' || feature.section === 'red-flag') {
+                  const demoFundCode = 122639;
+                  router.push(`/fund/${demoFundCode}?section=${feature.section}&t=${t}#${feature.section}`);
+                } else if (feature.section === 'health-score' || feature.section === 'holdings') {
+                  router.push(`/portfolio?section=${feature.section}&t=${t}`);
+                } else if (feature.href) {
+                  router.push(feature.href);
                 }
               }}
-              className="rounded-2xl bg-slate-800 border border-white/[0.06] p-4 sm:p-5 text-left shadow-[0_8px_30px_rgba(0,0,0,0.18)] hover:border-indigo-500/40 hover:-translate-y-1 transition-all cursor-pointer no-underline"
+              className="rounded-2xl bg-slate-800 border border-white/[0.06] p-4 sm:p-5 text-left shadow-[0_8px_30px_rgba(0,0,0,0.18)] hover:border-indigo-500/40 hover:-translate-y-1 transition-all cursor-pointer"
             >
               <div className="mb-3 text-2xl leading-none">{feature.emoji}</div>
               <h3 className="text-sm sm:text-base font-bold text-white mb-1.5">{feature.title}</h3>
               <p className="text-xs sm:text-sm leading-6 text-slate-400">{feature.subtitle}</p>
-            </Link>
+            </div>
           ))}
         </div>
       </section>

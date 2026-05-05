@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import FundChatWidget from '@/components/FundChatWidget';
 import Navbar from '@/components/Navbar';
@@ -113,7 +113,10 @@ function getRiskBadge(name: string) {
 
 export default function FundDetail() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const code = params.code as string;
+  const sectionParam = searchParams.get('section');
+const timestampParam = searchParams.get('t');
 
   const [fund, setFund] = useState<FundDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,15 +210,50 @@ export default function FundDetail() {
     checkWatchlist();
   }, [fund, userId]);
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      setTimeout(() => {
-        const el = document.querySelector(hash);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 500);
-    }
-  }, []);
+  useLayoutEffect(() => {
+    if (!fund || typeof window === 'undefined') return;
+
+    const resolveTargetId = () => {
+      const url = new URL(window.location.href);
+      const effectiveSection = sectionParam || url.searchParams.get('section');
+      const hash = window.location.hash;
+
+      if (effectiveSection === 'red-flag' || hash === '#red-flag') return 'red-flag';
+      if (effectiveSection === 'ai-chat' || hash === '#ai-chat') return 'ai-chat';
+      return '';
+    };
+
+    const id = resolveTargetId();
+    if (!id) return;
+
+    const headerOffset = 110;
+    const scrollToTarget = (behavior: ScrollBehavior) => {
+      const el = document.getElementById(id);
+      if (!el) return false;
+      el.scrollIntoView({ behavior, block: 'start' });
+      window.scrollBy({ top: -headerOffset, left: 0, behavior: 'auto' });
+      return true;
+    };
+
+    // Keep URL deterministic so refresh/back maintains target context
+    window.history.replaceState(null, '', `${window.location.pathname}?section=${id}#${id}`);
+
+    // Retry scrolling until the section is laid out
+    let attempts = 0;
+    const maxAttempts = 20;
+    let cancelled = false;
+
+    const tryScroll = () => {
+      if (cancelled) return;
+      const success = scrollToTarget(attempts < 3 ? 'smooth' : 'auto');
+      if (success || attempts >= maxAttempts) return;
+      attempts += 1;
+      window.requestAnimationFrame(tryScroll);
+    };
+
+    tryScroll();
+    return () => { cancelled = true; };
+  }, [fund, sectionParam, timestampParam]);
 
   const handleToggleWatchlist = async () => {
     if (!fund || watchlistBusy) return;
@@ -563,7 +601,7 @@ export default function FundDetail() {
           </div>
         </div>
 
-        <div id="red-flag" className="mt-6 bg-slate-800/60 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
+        <div id="red-flag" className="mt-6 scroll-mt-28 bg-slate-800/60 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
           <h2 className="text-base font-bold text-white mb-4">Red Flag Detector</h2>
           {redFlags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -583,7 +621,7 @@ export default function FundDetail() {
           )}
         </div>
 
-        <div id="ai-chat" className="mt-6 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">
+        <div id="ai-chat" className="mt-6 scroll-mt-28 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">
           <h2 className="text-base font-bold text-white mb-5">Ask AI About This Fund</h2>
           <FundChatWidget fundName={meta.scheme_name} fundContext={fundContext} />
         </div>

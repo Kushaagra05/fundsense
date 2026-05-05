@@ -155,6 +155,17 @@ export default function Portfolio() {
   useEffect(() => {
     document.body.style.overflow = "auto";
   }, []);
+  useEffect(() => {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  const section = params.get('section');
+  if (!section) return;
+  const timer = setTimeout(() => {
+    const el = document.getElementById(section);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 800);
+  return () => clearTimeout(timer);
+}, []);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -651,7 +662,7 @@ export default function Portfolio() {
         </div>
         {/* Portfolio Health Score */}
         {portfolio.length > 0 && (
-          <div id="health-score" className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-10">
+          <div id="health-score" className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-10 scroll-mt-28">
             <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
               🏥 Portfolio Health Score
             </h3>
