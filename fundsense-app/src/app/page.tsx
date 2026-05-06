@@ -51,7 +51,7 @@ export default function HomePage() {
       if (!name) return false;
       return name
         .split(/[\s-]+/)
-        .some((part) => part.startsWith(normalized));
+        .some((part: string) => part.startsWith(normalized));
     });
     setResults(matches.slice(0, 12));
     setActiveIndex(-1);
