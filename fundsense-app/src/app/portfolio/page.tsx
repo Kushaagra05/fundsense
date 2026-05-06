@@ -838,16 +838,6 @@ export default function Portfolio() {
             </button>
           </div>
 
-          {isLoadingNavs && (
-            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-10 flex flex-col items-center justify-center pt-20">
-              <svg className="animate-spin w-8 h-8 text-indigo-400 mb-3" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-              <p className="text-slate-300 font-medium text-sm">Fetching Live NAVs...</p>
-            </div>
-          )}
-
           {portfolio.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="text-6xl mb-4">📈</div>
@@ -870,7 +860,37 @@ export default function Portfolio() {
                   </tr>
                 </thead>
                 <tbody>
-                  {portfolio.map((item) => {
+                  {isLoadingNavs ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <tr key={`skeleton-${index}`} className="border-b border-white/[0.04] animate-pulse">
+                        <td className="py-4 px-6">
+                          <div className="h-4 w-48 bg-slate-700/50 rounded mb-2"></div>
+                          <div className="h-3 w-24 bg-slate-700/50 rounded"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-16 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-16 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-20 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-16 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-20 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="h-4 w-20 bg-slate-700/50 rounded ml-auto"></div>
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <div className="h-8 w-20 bg-slate-700/50 rounded mx-auto"></div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : portfolio.map((item) => {
                     const invested = item.units * item.buyNav;
                     const hasCurNav = item.curNav !== null && !Number.isNaN(item.curNav);
                     const current = hasCurNav && item.curNav ? item.units * item.curNav : invested;

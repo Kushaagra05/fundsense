@@ -362,12 +362,31 @@ const timestampParam = searchParams.get('t');
       <>
         <Navbar />
         <main className="relative z-[1] pt-[100px] pb-20 px-6 max-w-4xl mx-auto min-h-screen">
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <svg className="animate-spin w-10 h-10" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#334155" strokeWidth="3" />
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="#818cf8" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-            <p className="text-slate-400 text-sm font-medium">Fetching fund details...</p>
+          <div className="animate-pulse space-y-6">
+            <div className="h-4 w-24 bg-slate-700/50 rounded"></div>
+            <div className="h-10 w-3/4 bg-slate-700/50 rounded"></div>
+            <div className="flex flex-wrap gap-3">
+              <div className="h-6 w-24 bg-slate-700/50 rounded-full"></div>
+              <div className="h-6 w-32 bg-slate-700/50 rounded-full"></div>
+              <div className="h-6 w-20 bg-slate-700/50 rounded-full"></div>
+            </div>
+
+            <div className="h-40 bg-slate-700/50 rounded-2xl"></div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-24 bg-slate-700/50 rounded-2xl"></div>
+              ))}
+            </div>
+
+            <div className="bg-slate-700/30 rounded-2xl p-6 space-y-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="flex items-center justify-between gap-4">
+                  <div className="h-4 w-32 bg-slate-700/50 rounded"></div>
+                  <div className="h-4 w-24 bg-slate-700/50 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </main>
       </>

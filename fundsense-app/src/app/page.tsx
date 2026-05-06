@@ -169,15 +169,24 @@ export default function HomePage() {
 
       {/* Quick suggestion chips */}
       <div className="relative z-10 flex flex-wrap justify-center gap-2.5 mt-6">
-        {['SBI Bluechip Fund', 'HDFC Mid-Cap', 'Axis Small Cap', 'Parag Parikh Flexi Cap'].map((fundName) => (
-          <span
-            key={fundName}
-            onClick={() => { setQuery(fundName); setShowDropdown(true); }}
-            className="px-3.5 py-1.5 text-xs font-medium text-slate-500 bg-white/[0.04] border border-white/[0.06] rounded-full cursor-pointer transition-all duration-200 hover:text-indigo-300 hover:border-indigo-500/30"
-          >
-            {fundName}
-          </span>
-        ))}
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <span
+              key={`chip-skeleton-${index}`}
+              className="h-7 w-28 bg-slate-700/50 rounded-full animate-pulse"
+            ></span>
+          ))
+        ) : (
+          ['SBI Bluechip Fund', 'HDFC Mid-Cap', 'Axis Small Cap', 'Parag Parikh Flexi Cap'].map((fundName) => (
+            <span
+              key={fundName}
+              onClick={() => { setQuery(fundName); setShowDropdown(true); }}
+              className="px-3.5 py-1.5 text-xs font-medium text-slate-500 bg-white/[0.04] border border-white/[0.06] rounded-full cursor-pointer transition-all duration-200 hover:text-indigo-300 hover:border-indigo-500/30"
+            >
+              {fundName}
+            </span>
+          ))
+        )}
       </div>
 
       <section className="relative z-10 mt-16 w-full max-w-6xl mx-auto">

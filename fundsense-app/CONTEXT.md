@@ -33,6 +33,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Portfolio holdings include a "Should I Exit?" AI verdict per fund
 - Watchlist feature: add/remove from fund detail page; uses Supabase `watchlist` table for logged-in users and `localStorage` fallback for guests
 - Portfolio page includes a Watchlist section with live NAV, 1Y return, 3Y CAGR, `View Fund` link, remove action, and loading skeletons
+- Fund detail, portfolio holdings, and home suggestion chips use skeleton loaders during data fetches
 - Home page includes a "Why FundSense is Different" section with six feature cards under the search area
 - Home feature cards are clickable and link to fund detail, portfolio, quiz, and SIP pages
 - Home feature cards now deep-link to section anchors like fund AI chat, red flags, health score, and holdings
