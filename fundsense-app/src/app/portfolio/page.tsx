@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+import Tooltip from "@/components/Tooltip";
 
 type FundListItem = {
   schemeCode: number;
@@ -830,7 +831,7 @@ export default function Portfolio() {
           )}
         </div>
 
-        <div id="holdings" className="card-glass border border-white/[0.06] rounded-2xl backdrop-blur-lg overflow-hidden min-h-[300px] relative">
+        <div id="holdings" className="card-glass border border-white/[0.06] rounded-2xl backdrop-blur-lg overflow-visible min-h-[300px] relative">
           <div className="p-6 sm:p-8 border-b border-white/[0.04] flex justify-between items-center">
             <h3 className="text-xl font-bold text-white">Holdings</h3>
             <button onClick={fetchLiveNavs} className="text-slate-400 hover:text-indigo-400 transition-colors" title="Refresh" type="button">
@@ -845,17 +846,57 @@ export default function Portfolio() {
               <p className="text-slate-400 text-sm">Add your first investment above to get started.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-800/30 border-b border-white/[0.08]">
                     <th className="py-4 px-6 text-slate-400 font-semibold text-xs uppercase tracking-wider">Fund Name</th>
-                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Units</th>
-                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Buy NAV</th>
+                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">
+                      <span className="inline-flex items-center justify-end gap-1 w-full">
+                        Units
+                        <Tooltip
+                          term="Units"
+                          explanation="Units = number of fund shares you own. More units = more investment."
+                        />
+                      </span>
+                    </th>
+                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">
+                      <span className="inline-flex items-center justify-end gap-1 w-full">
+                        Buy NAV
+                        <Tooltip
+                          term="Buy NAV"
+                          explanation="NAV = Net Asset Value. The price per unit when you bought."
+                        />
+                      </span>
+                    </th>
                     <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Invested</th>
-                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Cur NAV</th>
-                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Cur Value</th>
-                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">Gain/Loss</th>
+                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">
+                      <span className="inline-flex items-center justify-end gap-1 w-full">
+                        Cur NAV
+                        <Tooltip
+                          term="Cur NAV"
+                          explanation="Current price per unit of this fund today."
+                        />
+                      </span>
+                    </th>
+                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">
+                      <span className="inline-flex items-center justify-end gap-1 w-full">
+                        Cur Value
+                        <Tooltip
+                          term="Cur Value"
+                          explanation="Total current worth of your investment = Units × Current NAV"
+                        />
+                      </span>
+                    </th>
+                    <th className="py-4 px-4 text-slate-400 font-semibold text-xs uppercase tracking-wider text-right">
+                      <span className="inline-flex items-center justify-end gap-1 w-full">
+                        Gain/Loss
+                        <Tooltip
+                          term="Gain/Loss"
+                          explanation="Profit or loss compared to what you originally invested."
+                        />
+                      </span>
+                    </th>
                     <th className="py-4 px-6 text-slate-400 font-semibold text-xs uppercase tracking-wider text-center">Action</th>
                   </tr>
                 </thead>

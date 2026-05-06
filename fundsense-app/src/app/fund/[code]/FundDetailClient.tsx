@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import FundChatWidget from '@/components/FundChatWidget';
 import Navbar from '@/components/Navbar';
+import Tooltip from '@/components/Tooltip';
 import { supabase } from '@/lib/supabase';
 
 type NavData = {
@@ -461,7 +462,15 @@ export default function FundDetailClient() {
     if (value === null) {
       return (
         <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
-          <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">{label}</p>
+          <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
+            <span className="inline-flex items-center gap-1">
+              {label}
+              <Tooltip
+                term={label}
+                explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
+              />
+            </span>
+          </p>
           <p className="text-2xl font-bold tracking-tight text-slate-500">N/A</p>
         </div>
       );
@@ -469,7 +478,15 @@ export default function FundDetailClient() {
     const isPositive = value >= 0;
     return (
       <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
-        <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">{label}</p>
+        <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
+          <span className="inline-flex items-center gap-1">
+            {label}
+            <Tooltip
+              term={label}
+              explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
+            />
+          </span>
+        </p>
         <p className={`text-2xl font-bold tracking-tight ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
           {isPositive ? '+' : ''}{value.toFixed(2)}%
         </p>
@@ -548,7 +565,15 @@ export default function FundDetailClient() {
         <div className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 mb-6 backdrop-blur-lg">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Current NAV</p>
+              <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
+                <span className="inline-flex items-center gap-1">
+                  Current NAV
+                  <Tooltip
+                    term="Current NAV"
+                    explanation="NAV = Net Asset Value. The price of one unit of this fund today."
+                  />
+                </span>
+              </p>
               <p className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">₹{latestNav.toFixed(4)}</p>
               <p className="text-slate-500 text-xs mt-1.5">as of {navData[0].date}</p>
             </div>

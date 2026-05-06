@@ -15,28 +15,45 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate fetching funds
-    setIsLoading(true);
-    setTimeout(() => {
-      setAllFunds([
-        { schemeCode: 122639, schemeName: "Parag Parikh Flexi Cap Fund" },
-        { schemeCode: 118834, schemeName: "SBI Bluechip Fund" },
-        { schemeCode: 119551, schemeName: "HDFC Mid-Cap Opportunities Fund" },
-        { schemeCode: 125497, schemeName: "Axis Small Cap Fund" },
-      ]);
-      setIsLoading(false);
-    }, 500);
+    let cancelled = false;
+    const loadFunds = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("https://api.mfapi.in/mf");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          setAllFunds(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setAllFunds([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadFunds();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!query) {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
       setResults([]);
       return;
     }
-    const matches = allFunds.filter(fund =>
-      fund.schemeName.toLowerCase().includes(query.toLowerCase())
-    );
-    setResults(matches);
+    const matches = allFunds.filter((fund) => {
+      const name = (fund?.schemeName || "").toLowerCase();
+      if (!name) return false;
+      return name
+        .split(/[\s-]+/)
+        .some((part) => part.startsWith(normalized));
+    });
+    setResults(matches.slice(0, 12));
     setActiveIndex(-1);
   }, [query, allFunds]);
 
