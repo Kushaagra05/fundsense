@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="max-w-2xl w-full text-center py-24">
         <div className="text-6xl sm:text-8xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-indigo-600">404</div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Page not found</h1>
-        <p className="text-slate-400 mb-8">Lagta hai galat jagah aa gaye. Wapas chalo!</p>
+        <p className="text-slate-400 mb-8">Looks like you went to the wrong page. Go back!</p>
 
         <div className="flex justify-center">
           <Link

@@ -8,14 +8,14 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Frontend: Next.js 14 (App Router), Tailwind CSS, TypeScript
 - Data: mfapi.in (free Indian mutual fund API, no key needed)
 - Hosting: Vercel (not deployed yet)
-- Auth: Supabase (not added yet)
+- Auth: Supabase (email/password + Google OAuth)
 - AI: Claude API / OpenAI API (not added yet)
 
 ## Pages Built — ALL COMPLETE ✅
 - / (home) → Live fund search with dropdown
 - /fund/[code] → Fund detail with NAV, 1M/6M/1Y/3Y returns, risk badge
 - /compare → Side by side fund comparison with winner highlights and verdict
-- /sip → Calculators (SIP + Tax) with personal Hinglish tax tips
+- /sip → Calculators (SIP + Tax) with personal tax tips
 - /quiz → Risk profiler quiz with 5 questions and investor profile result
 - /quiz → Personalized fund recommendation card + filtered top funds by AI category (Direct Growth, recent NAV)
 - /portfolio → Portfolio tracker with Simple Mode (amount+date only) 
@@ -28,7 +28,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Live NAV fetching for all portfolio holdings
 - Fund detail AI chat widget (FundChatWidget) below Fund Information
 - Fund chat widget component for fund Q&A
-- Fund chat API route (OpenAI) with max 3 Hinglish bullets and a Bottom line verdict
+- Fund chat API route (OpenAI) with max 3 bullet point explanations and a Bottom line verdict
 - Red Flag Detector on fund detail page (1Y/3Y negative returns, fund age < 3 years)
 - Portfolio holdings include a "Should I Exit?" AI verdict per fund
 - Watchlist feature: add/remove from fund detail page; uses Supabase `watchlist` table for logged-in users and `localStorage` fallback for guests
@@ -44,7 +44,8 @@ with Next.js 14, Tailwind CSS, TypeScript.
  - Fund detail now includes a `Share` button next to the watchlist button. On mobile it uses the native `navigator.share` sheet; on desktop it copies the current fund URL to clipboard and shows a small toast "Link copied!" for 2 seconds.
  - App now includes a site `Footer` component with logo/tagline, navigation links (Compare, Calculators, Risk Quiz, Portfolio, Auth), attribution (Built for Indian investors 🇮🇳, Data from MFAPI.in), and the legal line `© 2026 FundSense. Not a SEBI registered advisor.` The `Footer` is responsive and stacks on mobile.
  - App now includes a site `Footer` component with logo/tagline, navigation links (Compare, Calculators, Risk Quiz, Portfolio, Auth), attribution (Built for Indian investors 🇮🇳, Data from MFAPI.in), and the legal line `© 2026 FundSense. Not a SEBI registered advisor.` The `Footer` is responsive and stacks on mobile.
- - Added custom 404 page at `src/app/not-found.tsx` with a large indigo gradient "404", heading "Page not found", Hinglish subtext, and a "Go to Home" button. Keeps the dark `bg-slate-900` theme and centered layout.
+ - Added custom 404 page at `src/app/not-found.tsx` with a large indigo gradient "404", heading "Page not found", friendly message, and a "Go to Home" button. Keeps the dark `bg-slate-900` theme and centered layout.
+ - Auth page now includes a Google OAuth button with callback route at `/auth/callback` that redirects signed-in users to `/portfolio`.
 
 ## Important Rules
 - Always use "use client" for interactive components

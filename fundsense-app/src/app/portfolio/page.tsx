@@ -130,23 +130,32 @@ export default function Portfolio() {
   const exitCheckIdRef = useRef<string | null>(null);
 
   const fetchNavsForEntries = useCallback(async (entries: PortfolioEntry[]) => {
-    if (entries.length === 0) return;
+    if (entries.length === 0) {
+      setIsLoadingNavs(false);
+      return;
+    }
     setIsLoadingNavs(true);
-    const updated = await Promise.all(
-      entries.map(async (item) => {
-        try {
-          const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
-          if (!res.ok) throw new Error("NAV error");
-          const data = await res.json();
-          const nav = data?.data?.[0]?.nav;
-          return nav ? { ...item, curNav: parseFloat(nav) } : item;
-        } catch {
-          return item;
-        }
-      })
-    );
-    setPortfolio(updated);
-    setIsLoadingNavs(false);
+    try {
+      const updated = await Promise.all(
+        entries.map(async (item) => {
+          try {
+            const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
+            if (!res.ok) throw new Error("NAV error");
+            const data = await res.json();
+            const nav = data?.data?.[0]?.nav;
+            return nav ? { ...item, curNav: parseFloat(nav) } : item;
+          } catch (error) {
+            console.error(`Failed to fetch NAV for code ${item.code}:`, error);
+            return item;
+          }
+        })
+      );
+      setPortfolio(updated);
+    } catch (error) {
+      console.error("Error fetching NAVs:", error);
+    } finally {
+      setIsLoadingNavs(false);
+    }
   }, []);
 
   const simpleSearchRef = useRef<HTMLDivElement>(null);
@@ -180,82 +189,100 @@ export default function Portfolio() {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
+      try {
+        // Check if there's a session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setUserId(session.user.id);
+          const { data: rows } = await supabase.from("portfolios").select("*").eq("user_id", session.user.id);
+          const { data: watchlistRows } = await supabase
+            .from("watchlist")
+            .select("id, code, name, created_at")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false });
 
-      if (user) {
-        setUserId(user.id);
-        const { data: rows } = await supabase.from("portfolios").select("*").eq("user_id", user.id);
-        const { data: watchlistRows } = await supabase
-          .from("watchlist")
-          .select("id, code, name, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+          if (rows && rows.length > 0) {
+            const mapped = rows.map((row: any) => ({
+              id: String(row.id),
+              code: Number(row.code ?? row.scheme_code ?? row.schemeCode),
+              name: row.name ?? row.scheme_name ?? row.schemeName,
+              units: Number(row.units),
+              buyNav: Number(row.buy_nav ?? row.buyNav),
+              date: row.date,
+              curNav: null,
+            })) as PortfolioEntry[];
+            setPortfolio(mapped);
+            fetchNavsForEntries(mapped);
+          } else {
+            setPortfolio([]);
+            setIsLoadingNavs(false);
+          }
 
-        if (rows && rows.length > 0) {
-          const mapped = rows.map((row: any) => ({
-            id: String(row.id),
-            code: Number(row.code ?? row.scheme_code ?? row.schemeCode),
-            name: row.name ?? row.scheme_name ?? row.schemeName,
-            units: Number(row.units),
-            buyNav: Number(row.buy_nav ?? row.buyNav),
-            date: row.date,
-            curNav: null,
-          })) as PortfolioEntry[];
-          setPortfolio(mapped);
-          fetchNavsForEntries(mapped);
+          if (watchlistRows && watchlistRows.length > 0) {
+            const mappedWatchlist = watchlistRows.map((row: any) => ({
+              id: String(row.id),
+              code: Number(row.code),
+              name: String(row.name ?? "Unnamed Fund"),
+              createdAt: String(row.created_at ?? ""),
+            })) as WatchlistEntry[];
+            setWatchlist(mappedWatchlist);
+          } else {
+            setWatchlist([]);
+          }
+
+          hasLoadedRef.current = true;
+          setAuthChecked(true);
+          return;
         }
 
-        if (watchlistRows && watchlistRows.length > 0) {
-          const mappedWatchlist = watchlistRows.map((row: any) => ({
-            id: String(row.id),
-            code: Number(row.code),
-            name: String(row.name ?? "Unnamed Fund"),
-            createdAt: String(row.created_at ?? ""),
-          })) as WatchlistEntry[];
-          setWatchlist(mappedWatchlist);
+        // No session, use localStorage
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored) as PortfolioEntry[];
+            setPortfolio(parsed);
+            if (parsed.length > 0) {
+              fetchNavsForEntries(parsed);
+            } else {
+              setIsLoadingNavs(false);
+            }
+          } catch {
+            setPortfolio([]);
+            setIsLoadingNavs(false);
+          }
+        } else {
+          setPortfolio([]);
+          setIsLoadingNavs(false);
+        }
+
+        const storedWatchlist = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+        if (storedWatchlist) {
+          try {
+            const parsed = JSON.parse(storedWatchlist) as Array<{ code: number; name: string }>;
+            const normalized = parsed.map((item, index) => ({
+              id: `local-${item.code}-${index}`,
+              code: Number(item.code),
+              name: String(item.name),
+              createdAt: "",
+            }));
+            setWatchlist(normalized);
+          } catch {
+            setWatchlist([]);
+          }
         } else {
           setWatchlist([]);
         }
 
         hasLoadedRef.current = true;
         setAuthChecked(true);
-        return;
-      }
-
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as PortfolioEntry[];
-          setPortfolio(parsed);
-          if (parsed.length > 0) {
-            fetchNavsForEntries(parsed);
-          }
-        } catch {
-          setPortfolio([]);
-        }
-      }
-
-      const storedWatchlist = localStorage.getItem(WATCHLIST_STORAGE_KEY);
-      if (storedWatchlist) {
-        try {
-          const parsed = JSON.parse(storedWatchlist) as Array<{ code: number; name: string }>;
-          const normalized = parsed.map((item, index) => ({
-            id: `local-${item.code}-${index}`,
-            code: Number(item.code),
-            name: String(item.name),
-            createdAt: "",
-          }));
-          setWatchlist(normalized);
-        } catch {
-          setWatchlist([]);
-        }
-      } else {
+      } catch (error) {
+        console.error("Portfolio init error:", error);
+        setPortfolio([]);
         setWatchlist([]);
+        setIsLoadingNavs(false);
+        setAuthChecked(true);
       }
-
-      hasLoadedRef.current = true;
-      setAuthChecked(true);
     };
     init();
   }, [fetchNavsForEntries]);
@@ -357,33 +384,36 @@ export default function Portfolio() {
       }
 
       setWatchlistLoading(true);
-      const updated = await Promise.all(
-        watchlist.map(async (item) => {
-          try {
-            const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
-            if (!res.ok) throw new Error("NAV error");
-            const data = await res.json();
-            const navData = data?.data || [];
-            const currentNav = navData.length > 0 ? parseFloat(navData[0].nav) : null;
-            return {
-              ...item,
-              currentNav,
-              return1y: calcReturn(navData, 365),
-              return3y: calcCAGR(navData, 3),
-            };
-          } catch {
-            return {
-              ...item,
-              currentNav: null,
-              return1y: null,
-              return3y: null,
-            };
-          }
-        })
-      );
+      try {
+        const updated = await Promise.all(
+          watchlist.map(async (item) => {
+            try {
+              const res = await fetch(`https://api.mfapi.in/mf/${item.code}`);
+              if (!res.ok) throw new Error("NAV error");
+              const data = await res.json();
+              const navData = data?.data || [];
+              const currentNav = navData.length > 0 ? parseFloat(navData[0].nav) : null;
+              return {
+                ...item,
+                currentNav,
+                return1y: calcReturn(navData, 365),
+                return3y: calcCAGR(navData, 3),
+              };
+            } catch (error) {
+              return {
+                ...item,
+                currentNav: null,
+                return1y: null,
+                return3y: null,
+              };
+            }
+          })
+        );
 
-      setWatchlistStats(updated);
-      setWatchlistLoading(false);
+        setWatchlistStats(updated);
+      } finally {
+        setWatchlistLoading(false);
+      }
     };
 
     fetchWatchlistStats();
@@ -568,8 +598,8 @@ export default function Portfolio() {
     const daysHeldText = daysHeld !== null ? `${daysHeld} days` : "N/A";
 
     return [
-      "Give a clear, one-line Hinglish verdict only. No story, no extra context.",
-      "Start with one of: Hold, Exit, Switch. Example: 'Hold karo - long term theek hai'.",
+      "Give a clear, one-line verdict only. No story, no extra context.",
+      "Start with one of: Hold, Exit, Switch. Example: 'Hold - long term is good'.",
       `Fund: ${item.name}`,
       `Buy NAV: ₹${item.buyNav.toFixed(4)}`,
       `Current NAV: ${currentNavText}`,
@@ -674,33 +704,33 @@ export default function Portfolio() {
               // Check 1: Overall returns
               if (summary.totalPct < 0) {
                 score -= 50;
-                feedback.push({ text: "Portfolio abhi loss mein hai — thoda patience rakhiye", color: "text-red-400" });
+                feedback.push({ text: "Your portfolio is currently at a loss — be patient", color: "text-red-400" });
               } else if (summary.totalPct < 5) {
                 score -= 25;
-                feedback.push({ text: "Returns thode weak hain — better funds explore kariye", color: "text-yellow-400" });
+                feedback.push({ text: "Returns are weak — explore better funds", color: "text-yellow-400" });
               } else if (summary.totalPct < 12) {
                 score -= 10;
-                feedback.push({ text: "Returns theek hain — aur improve ho sakta hai", color: "text-yellow-400" });
+                feedback.push({ text: "Returns are fine — they can improve more", color: "text-yellow-400" });
               } else {
-                feedback.push({ text: "Returns acche hain — sahi track pe hai aap!", color: "text-emerald-400" });
+                feedback.push({ text: "Returns are good — you are on the right track!", color: "text-emerald-400" });
               }
 
               // Check 2: Too many funds
               if (portfolio.length > 5) {
                 score -= 20;
-                feedback.push({ text: `${portfolio.length} funds bahut zyada hain — 3-4 kaafi hote hain`, color: "text-yellow-400" });
+                feedback.push({ text: `${portfolio.length} funds are too many — 3-4 are enough`, color: "text-yellow-400" });
               } else if (portfolio.length === 1) {
                 score -= 10;
-                feedback.push({ text: "Sirf ek fund hai — thoda diversify kariye", color: "text-yellow-400" });
+                feedback.push({ text: "You have only one fund — diversify a bit", color: "text-yellow-400" });
               } else {
-                feedback.push({ text: `${portfolio.length} funds — diversification theek hai`, color: "text-emerald-400" });
+                feedback.push({ text: `${portfolio.length} funds — diversification is good`, color: "text-emerald-400" });
               }
 
               // Check 3: Regular vs Direct plans
               const regularCount = portfolio.filter(item => item.name.toLowerCase().includes("regular")).length;
               if (regularCount > 0) {
                 score -= 20;
-                feedback.push({ text: `${regularCount} Regular Plan fund(s) hai — Direct mein switch kariye, fees bachegi`, color: "text-red-400" });
+                feedback.push({ text: `${regularCount} Regular Plan fund(s) — switch to Direct Plan to save on fees`, color: "text-red-400" });
               }
 
               // Clamp score

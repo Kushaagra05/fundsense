@@ -196,7 +196,7 @@ export default function Quiz() {
     const riskPct = answers[4] || "N/A";
 
     return [
-      "Give a concise recommendation in Hinglish.",
+      "Give a concise recommendation in simple English.",
       "Use max 3 bullet points and a final Bottom line (one line).",
       "Include: best fund category, suggested monthly SIP amount based on budget, 2-3 example fund names, and a one-line verdict.",
       `Risk profile: ${resultConfig.type}`,

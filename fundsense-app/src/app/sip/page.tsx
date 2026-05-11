@@ -140,7 +140,7 @@ useEffect(() => {
             Calculators
           </h1>
           <p className="text-slate-400 max-w-lg mx-auto">
-            Plan your investments and calculate your taxes — sab kuch ek jagah!
+            Plan your investments and calculate your taxes — everything in one place!
           </p>
         </div>
 

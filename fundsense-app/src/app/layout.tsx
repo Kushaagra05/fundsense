@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "FundSense — AI-Powered Mutual Fund Analyzer for Indian Investors",
-  description: "Analyze, compare and track Indian mutual funds with AI. Get fund explanations in Hinglish, red flag detection, portfolio health score and tax calculator. Free for Indian investors.",
+  description: "Analyze, compare and track Indian mutual funds with AI. Get easy fund explanations, red flag detection, portfolio health score and tax calculator. Free for Indian investors.",
   keywords: "mutual fund analyzer india, SIP calculator, mutual fund comparison, indian mutual funds, portfolio tracker india",
   openGraph: {
     title: "FundSense — Smart Mutual Fund Analyzer",
