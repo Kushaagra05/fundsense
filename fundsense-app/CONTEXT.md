@@ -28,8 +28,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Live NAV fetching for all portfolio holdings
 - Fund detail AI chat widget (FundChatWidget) below Fund Information
 - Fund chat widget component for fund Q&A
-- Fund chat API route (OpenAI) with max 3 bullet point explanations and a Bottom line verdict
-- Red Flag Detector on fund detail page (1Y/3Y negative returns, fund age < 3 years)
+- Fund chat API route (OpenAI) now returns 4-5 Hinglish bullets covering nature, risk, returns context, suitable investor, and a Bottom line verdict; acknowledges red flags honestly
 - Portfolio holdings include a "Should I Exit?" AI verdict per fund
 - Watchlist feature: add/remove from fund detail page; uses Supabase `watchlist` table for logged-in users and `localStorage` fallback for guests
 - Portfolio page includes a Watchlist section with live NAV, 1Y return, 3Y CAGR, `View Fund` link, remove action, and loading skeletons

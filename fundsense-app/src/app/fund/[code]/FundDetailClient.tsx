@@ -441,23 +441,6 @@ export default function FundDetailClient() {
   const formatReturn = (value: number | null) => (value === null ? 'N/A' : `${value.toFixed(2)}%`);
   const fundContext = `Fund: ${meta.scheme_name}\nFund House: ${meta.fund_house || 'N/A'}\nCategory: ${meta.scheme_category || meta.scheme_type || 'N/A'}\nCurrent NAV: ₹${latestNav.toFixed(4)}\nReturns: 1M ${formatReturn(return1m)}, 6M ${formatReturn(return6m)}, 1Y ${formatReturn(return1y)}, 3Y CAGR ${formatReturn(return3y)}`;
 
-  const latestNavDate = parseDate(navData[0].date);
-  const firstNavDate = navData.length > 0 ? parseDate(navData[navData.length - 1].date) : null;
-  const fundAgeYears = latestNavDate && firstNavDate
-    ? (latestNavDate.getTime() - firstNavDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-    : null;
-
-  const redFlags: string[] = [];
-  if (return1y !== null && return1y < 0) {
-    redFlags.push('This fund has given loss in the last 1 year');
-  }
-  if (return3y !== null && return3y < 0) {
-    redFlags.push('3 saal ka track record bhi negative hai — not great');
-  }
-  if (fundAgeYears !== null && fundAgeYears < 3) {
-    redFlags.push('Fund naya hai, track record bahut kam hai');
-  }
-
   const ReturnDisplay = ({ label, value }: { label: string, value: number | null }) => {
     if (value === null) {
       return (
@@ -641,26 +624,6 @@ export default function FundDetailClient() {
               <span className="text-slate-200 text-sm font-medium">{navData.length > 0 ? navData[navData.length - 1].date : '—'}</span>
             </div>
           </div>
-        </div>
-
-        <div id="red-flag" className="mt-6 scroll-mt-28 bg-slate-800/60 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
-          <h2 className="text-base font-bold text-white mb-4">Red Flag Detector</h2>
-          {redFlags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {redFlags.map((flag) => (
-                <span
-                  key={flag}
-                  className="px-3 py-1.5 text-xs font-semibold text-red-300 bg-red-500/10 border border-red-500/25 rounded-full"
-                >
-                  ⚠️ {flag}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-full">
-              ✅ Koi red flag nahi mila — fund looks clean
-            </span>
-          )}
         </div>
 
         <div id="ai-chat" className="mt-6 scroll-mt-28 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">

@@ -332,7 +332,7 @@ export default function HomePage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           {/* Feature card data */}
           {[
             {
@@ -340,12 +340,6 @@ export default function HomePage() {
               title: 'AI Fund Chat',
               subtitle: 'Fund ke baare mein kuch bhi poochiye',
               section: 'ai-chat',
-            },
-            {
-              emoji: '🚨',
-              title: 'Red Flag Detector',
-              subtitle: 'Koi bhi fund ka risk 1 second mein pakad lijiye',
-              section: 'red-flag',
             },
             {
               emoji: '🏥',
