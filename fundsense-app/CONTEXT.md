@@ -12,7 +12,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - AI: Claude API / OpenAI API (not added yet)
 
 ## Pages Built — ALL COMPLETE ✅
-- / (home) → Live fund search with dropdown
+- / (home) → Live fund search with dropdown, animated placeholder, stats bar, and live market ticker (Nifty and Sensex) via server API
 - /fund/[code] → Fund detail with NAV, 1M/6M/1Y/3Y returns, risk badge
 - /compare → Side by side fund comparison with winner highlights and verdict
 - /sip → Calculators (SIP + Tax) with personal tax tips
@@ -38,6 +38,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - Fund detail pages generate dynamic metadata with fund name and current NAV
 - Added a reusable Tooltip component for glossary hints across fund and portfolio pages
 - Home page includes a "Why FundSense is Different" section with six feature cards under the search area
+ - Home page includes a live market ticker (Yahoo Finance via /api/market-data for Nifty and Sensex), animated search placeholder, and quick stats bar above suggestions
 - Home feature cards are clickable and link to fund detail, portfolio, quiz, and SIP pages
 - Home feature cards now deep-link to section anchors like fund AI chat, red flags, health score, and holdings
 - Fund detail and portfolio pages now auto-scroll to hash targets on load using `window.location.hash` and a delayed `scrollIntoView` for `#ai-chat`, `#red-flag`, `#health-score`, and `#holdings`
