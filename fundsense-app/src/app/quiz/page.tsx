@@ -19,6 +19,10 @@ type FundListItem = {
   schemeName: string;
 };
 
+type TopFund = FundListItem & {
+  nav: number | null;
+};
+
 type Recommendation = {
   title: string;
   desc: string;
@@ -27,54 +31,74 @@ type Recommendation = {
 type ResultConfig = {
   type: string;
   badgeClass: string;
-  desc: string;
+  summaryLines: string[];
+  fundFit: string;
+  motivation: string;
   recommended: Recommendation[];
 };
 
 const questions: QuizQuestion[] = [
   {
-    text: "What is your investment goal?",
+    text: "How old are you?",
     options: [
-      { text: "Save for retirement", points: 3 },
-      { text: "Build wealth", points: 2 },
-      { text: "Beat inflation", points: 1 },
-      { text: "Emergency fund", points: 0 },
-    ],
-  },
-  {
-    text: "How long can you stay invested?",
-    options: [
-      { text: "More than 10 years", points: 3 },
-      { text: "5-10 years", points: 2 },
-      { text: "1-5 years", points: 1 },
-      { text: "Less than 1 year", points: 0 },
-    ],
-  },
-  {
-    text: "If your investment drops 20%, what do you do?",
-    options: [
-      { text: "Buy more", points: 3 },
-      { text: "Wait and watch", points: 2 },
-      { text: "Sell some", points: 1 },
-      { text: "Sell everything", points: 0 },
+      { text: "Under 25", points: 3 },
+      { text: "25-35", points: 2 },
+      { text: "35-50", points: 1 },
+      { text: "Above 50", points: 0 },
     ],
   },
   {
     text: "What is your monthly income?",
     options: [
-      { text: "Above ₹1 Lakh", points: 3 },
-      { text: "₹50k-1 Lakh", points: 2 },
-      { text: "₹25k-50k", points: 1 },
-      { text: "Below ₹25k", points: 0 },
+      { text: "Under ₹25k", points: 0 },
+      { text: "₹25k-₹50k", points: 1 },
+      { text: "₹50k-₹1L", points: 2 },
+      { text: "Above ₹1L", points: 3 },
     ],
   },
   {
-    text: "How much of savings can you risk?",
+    text: "If your investment drops 20%, what will you do?",
     options: [
-      { text: "More than 50%", points: 3 },
-      { text: "25-50%", points: 2 },
-      { text: "10-25%", points: 1 },
-      { text: "Less than 10%", points: 0 },
+      { text: "Sell everything", points: 0 },
+      { text: "Sell some", points: 1 },
+      { text: "Hold and wait", points: 2 },
+      { text: "Buy more", points: 3 },
+    ],
+  },
+  {
+    text: "How long can you keep money invested?",
+    options: [
+      { text: "Less than 1 year", points: 0 },
+      { text: "1-3 years", points: 1 },
+      { text: "3-7 years", points: 2 },
+      { text: "7+ years", points: 3 },
+    ],
+  },
+  {
+    text: "What is your main investment goal?",
+    options: [
+      { text: "Safety", points: 0 },
+      { text: "Regular income", points: 1 },
+      { text: "Wealth growth", points: 3 },
+      { text: "Beat inflation", points: 2 },
+    ],
+  },
+  {
+    text: "Do you have any existing investments?",
+    options: [
+      { text: "No investments yet", points: 0 },
+      { text: "FD or RD only", points: 1 },
+      { text: "Stocks or MF already", points: 2 },
+      { text: "Mix of everything", points: 3 },
+    ],
+  },
+  {
+    text: "What would you do with ₹1 lakh extra?",
+    options: [
+      { text: "Keep in savings", points: 0 },
+      { text: "Buy gold or property", points: 1 },
+      { text: "Invest in market", points: 3 },
+      { text: "Split between all", points: 2 },
     ],
   },
 ];
@@ -90,8 +114,9 @@ export default function Quiz() {
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
   const [recReply, setRecReply] = useState("");
-  const [topFunds, setTopFunds] = useState<FundListItem[]>([]);
+  const [topFunds, setTopFunds] = useState<TopFund[]>([]);
   const [topFundsMessage, setTopFundsMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = "auto";
@@ -106,16 +131,36 @@ export default function Quiz() {
     return undefined;
   }, [showResult]);
 
+  useEffect(() => {
+    if (showResult) return;
+    if (currentQuestion === 3) {
+      setToastMessage("Halfway there!");
+    } else if (currentQuestion === 5) {
+      setToastMessage("Almost done!");
+    } else {
+      setToastMessage(null);
+      return;
+    }
+
+    const timer = setTimeout(() => setToastMessage(null), 1800);
+    return () => clearTimeout(timer);
+  }, [currentQuestion, showResult]);
+
   const progressPct = ((currentQuestion + 1) / questions.length) * 100;
 
   const resultConfig = useMemo<ResultConfig>(() => {
-    if (totalScore >= 12) {
+    if (totalScore >= 15) {
       return {
-        type: "Aggressive Investor",
+        type: "🚀 Aggressive Investor",
         badgeClass:
           "bg-red-500/15 text-red-400 border border-red-500/25 shadow-[0_0_15px_rgba(239,68,68,0.2)]",
-        desc:
-          "You are willing to take significant risks for potentially higher returns. Short-term market volatility doesn't bother you much as you are focused on long-term wealth creation.",
+        summaryLines: [
+          "Aapko high growth chahiye aur short-term ups and downs se darr nahi lagta.",
+          "Risk aapke liye normal hai, bas long-term me wealth banana goal hai.",
+          "Market girta hai to aap panic nahi karte, patience strong hai.",
+        ],
+        fundFit: "Best fit: Small Cap, Mid Cap, Flexi Cap aur sectoral themes.",
+        motivation: "Aapka risk appetite strong hai — discipline rakho, reward bade milenge.",
         recommended: [
           { title: "Small Cap", desc: "High growth potential but highly volatile. Best for long term." },
           { title: "Mid Cap", desc: "Balance of good growth and moderate to high risk." },
@@ -124,13 +169,18 @@ export default function Quiz() {
       };
     }
 
-    if (totalScore >= 7) {
+    if (totalScore >= 9) {
       return {
-        type: "Moderate Investor",
+        type: "⚖️ Moderate Investor",
         badgeClass:
           "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 shadow-[0_0_15px_rgba(234,179,8,0.2)]",
-        desc:
-          "You seek a balance between capital appreciation and capital preservation. You can handle some market fluctuations but prefer a degree of stability.",
+        summaryLines: [
+          "Aap growth aur safety ka balance chahte ho — dono chahiye.",
+          "Risk aap handle kar sakte ho, par stability bhi important hai.",
+          "Aapke liye consistency + growth ka mix best rahega.",
+        ],
+        fundFit: "Best fit: Flexi Cap, Large & Mid, Hybrid aur quality Large Cap.",
+        motivation: "Smart balance se long-term me strong returns banenge.",
         recommended: [
           { title: "Flexi Cap", desc: "Dynamically shifts across all market caps based on conditions." },
           { title: "Hybrid Funds", desc: "Mix of equity and debt for balanced growth and safety." },
@@ -140,11 +190,16 @@ export default function Quiz() {
     }
 
     return {
-      type: "Conservative Investor",
+      type: "🛡️ Conservative Investor",
       badgeClass:
         "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.2)]",
-      desc:
-        "Your primary goal is capital preservation. You prefer steady, predictable returns over high-risk, high-reward opportunities. You dislike seeing your portfolio value drop.",
+      summaryLines: [
+        "Aapko safety sabse zyada important lagti hai — capital secure rehna chahiye.",
+        "Stable returns aapke liye best hain, high risk se aap comfortable nahi ho.",
+        "Slow and steady approach aapke temperament ko suit karta hai.",
+      ],
+      fundFit: "Best fit: Debt funds, Liquid funds aur high-quality Large Cap.",
+      motivation: "Shanti se grow karo — discipline hi sabse bada advantage hai.",
       recommended: [
         { title: "Liquid Funds", desc: "Extremely low risk, similar to a high-yield savings account." },
         { title: "Debt Funds", desc: "Steady returns by lending to solid companies and government." },
@@ -189,22 +244,26 @@ export default function Quiz() {
   };
 
   const buildRecommendationPrompt = () => {
-    const goal = answers[0] || "N/A";
-    const horizon = answers[1] || "N/A";
+    const age = answers[0] || "N/A";
+    const income = answers[1] || "N/A";
     const riskDrop = answers[2] || "N/A";
-    const income = answers[3] || "N/A";
-    const riskPct = answers[4] || "N/A";
+    const horizon = answers[3] || "N/A";
+    const goal = answers[4] || "N/A";
+    const existing = answers[5] || "N/A";
+    const extra = answers[6] || "N/A";
 
     return [
       "Give a concise recommendation in simple English.",
       "Use max 3 bullet points and a final Bottom line (one line).",
       "Include: best fund category, suggested monthly SIP amount based on budget, 2-3 example fund names, and a one-line verdict.",
       `Risk profile: ${resultConfig.type}`,
-      `Investment goal: ${goal}`,
-      `Investment horizon: ${horizon}`,
-      `Risk tolerance behavior: ${riskDrop}`,
+      `Age group: ${age}`,
       `Monthly income: ${income}`,
-      `Riskable savings: ${riskPct}`,
+      `Risk tolerance behavior: ${riskDrop}`,
+      `Investment horizon: ${horizon}`,
+      `Investment goal: ${goal}`,
+      `Existing investments: ${existing}`,
+      `Extra 1L usage: ${extra}`,
       `User SIP budget: ₹${sipBudget}`,
     ].join("\n");
   };
@@ -233,95 +292,93 @@ export default function Quiz() {
     }
   };
 
-  const extractCategory = (reply: string) => {
-    const categories = [
-      "Large Cap",
-      "Large & Mid",
-      "Flexi Cap",
-      "Mid Cap",
-      "Small Cap",
-      "ELSS",
-      "Hybrid",
-      "Debt",
-      "Liquid",
-      "Sectoral",
-      "Index",
-      "Contra",
-      "Value",
-    ];
-    const lines = reply.split(/\r?\n/).map((line) => line.replace(/^•\s*/, "").trim());
-    for (const line of lines) {
-      for (const category of categories) {
-        if (line.toLowerCase().includes(category.toLowerCase())) {
-          return category;
-        }
-      }
-    }
-    return "";
+  const getRiskTier = () => {
+    if (totalScore >= 15) return "aggressive" as const;
+    if (totalScore >= 9) return "moderate" as const;
+    return "conservative" as const;
   };
 
   useEffect(() => {
-    const category = extractCategory(recReply);
-    if (!category) {
+    if (!recReply) {
       setTopFunds([]);
       setTopFundsMessage("");
       return;
     }
 
+    const tier = getRiskTier();
+    const searchQuery =
+      tier === "conservative"
+        ? "SBI debt direct growth"
+        : tier === "moderate"
+        ? "Parag Parikh flexi cap direct growth"
+        : "Axis small cap direct growth";
+
+    const fallbackMap: Record<"conservative" | "moderate" | "aggressive", TopFund[]> = {
+      conservative: [
+        { schemeCode: 119598, schemeName: "SBI Magnum Gilt Fund", nav: null },
+        { schemeCode: 118989, schemeName: "HDFC Short Term Debt Fund", nav: null },
+      ],
+      moderate: [
+        { schemeCode: 122639, schemeName: "Parag Parikh Flexi Cap Fund", nav: null },
+        { schemeCode: 117022, schemeName: "Mirae Asset Hybrid Equity Fund", nav: null },
+      ],
+      aggressive: [
+        { schemeCode: 125497, schemeName: "Axis Small Cap Fund", nav: null },
+        { schemeCode: 118834, schemeName: "Mirae Asset Large Cap Fund", nav: null },
+      ],
+    };
+
     let isActive = true;
     const fetchTopFunds = async () => {
       try {
         setTopFundsMessage("");
-        const res = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(category)}`);
-        if (!res.ok) return;
+        const res = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(searchQuery)}`);
+        if (!res.ok) {
+          setTopFunds([]);
+          setTopFundsMessage("No matching funds found.");
+          return;
+        }
         const data = await res.json();
+        console.log("Quiz top funds search", { searchQuery, data });
         const items = Array.isArray(data) ? data : data?.data ?? [];
-        const candidates = items.slice(0, 12) as FundListItem[];
+        const filtered = (items as FundListItem[]).filter((fund) => {
+          const name = fund.schemeName || "";
+          const lower = name.toLowerCase();
+          return lower.includes("direct") && lower.includes("growth");
+        });
+        const candidates = filtered.slice(0, 3);
+        if (candidates.length === 0) {
+          setTopFunds([]);
+          setTopFundsMessage("No matching funds found.");
+          return;
+        }
 
-        const validFunds: FundListItem[] = [];
-        await Promise.all(
+        const withNav = await Promise.all(
           candidates.map(async (fund) => {
-            if (!isActive) return;
-            const name = fund.schemeName || "";
-            const lower = name.toLowerCase();
-            if (!lower.includes("direct") || !lower.includes("growth")) return;
-            if (/(dividend|idcw|weekly|monthly|quarterly)/i.test(lower)) return;
-
             try {
               const detailRes = await fetch(`https://api.mfapi.in/mf/${fund.schemeCode}`);
-              if (!detailRes.ok) return;
+              if (!detailRes.ok) return { ...fund, nav: null } as TopFund;
               const detail = await detailRes.json();
               const navText = detail?.data?.[0]?.nav;
-              const navDate = detail?.data?.[0]?.date;
-              const navValue = navText ? parseFloat(navText) : 0;
-              if (!navValue || navValue <= 0) return;
-
-              if (typeof navDate === "string") {
-                const parts = navDate.split("-");
-                const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
-                if (!year || year < 2023) return;
-              } else {
-                return;
-              }
-
-              if (isActive) validFunds.push(fund);
+              const navValue = navText ? parseFloat(navText) : null;
+              return { ...fund, nav: navValue && navValue > 0 ? navValue : null } as TopFund;
             } catch {
-              return;
+              return { ...fund, nav: null } as TopFund;
             }
           })
         );
 
-        const finalFunds = validFunds.slice(0, 3);
         if (!isActive) return;
-        setTopFunds(finalFunds);
-        if (finalFunds.length === 0) {
-          setTopFundsMessage("Koi accha fund nahi mila, please search manually");
-        }
-      } catch {
-        if (isActive) {
-          setTopFunds([]);
+        setTopFunds(withNav);
+      } catch (error) {
+        if (!isActive) return;
+        if (error instanceof TypeError) {
+          setTopFunds(fallbackMap[tier]);
           setTopFundsMessage("");
+          return;
         }
+        setTopFunds([]);
+        setTopFundsMessage("No matching funds found.");
       }
     };
 
@@ -329,7 +386,7 @@ export default function Quiz() {
     return () => {
       isActive = false;
     };
-  }, [recReply]);
+  }, [recReply, totalScore]);
 
   const current = questions[currentQuestion];
 
@@ -365,6 +422,16 @@ export default function Quiz() {
           </div>
           <div className="w-full h-2 bg-slate-800 rounded-full mb-8 overflow-hidden border border-white/[0.04]">
             <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${progressPct}%` }}></div>
+          </div>
+
+          <div className="flex justify-center mb-6 min-h-[32px]">
+            <div
+              className={`px-4 py-1.5 text-xs font-semibold text-indigo-100 bg-indigo-500/20 border border-indigo-400/30 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.25)] transition-opacity duration-300 ${
+                toastMessage ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {toastMessage ?? ""}
+            </div>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-8 leading-tight">{current.text}</h2>
@@ -406,7 +473,13 @@ export default function Quiz() {
                 {resultConfig.type}
               </span>
             </div>
-            <p className="text-slate-300 text-base max-w-lg mx-auto leading-relaxed">{resultConfig.desc}</p>
+            <div className="text-slate-300 text-base max-w-lg mx-auto leading-relaxed space-y-2">
+              {resultConfig.summaryLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              <p className="text-slate-200 font-semibold">{resultConfig.fundFit}</p>
+              <p className="text-indigo-200 font-semibold">{resultConfig.motivation}</p>
+            </div>
           </div>
 
           <div className="bg-slate-800/40 border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mb-8">
@@ -448,8 +521,13 @@ export default function Quiz() {
                   {topFunds.map((fund) => (
                     <div key={fund.schemeCode} className="bg-slate-800/40 border border-white/[0.04] p-5 rounded-xl">
                       <p className="text-sm font-semibold text-slate-100 mb-3 line-clamp-2">{fund.schemeName}</p>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Current NAV: {fund.nav !== null ? `₹${fund.nav.toFixed(2)}` : "N/A"}
+                      </p>
                       <Link
                         href={`/fund/${fund.schemeCode}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-300 hover:text-indigo-200 transition-colors no-underline"
                       >
                         View Fund →

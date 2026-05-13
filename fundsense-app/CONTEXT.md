@@ -16,8 +16,8 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - /fund/[code] → Fund detail with NAV, 1M/6M/1Y/3Y returns, risk badge
 - /compare → Side by side fund comparison with winner highlights and verdict
 - /sip → Calculators (SIP + Tax) with personal tax tips
-- /quiz → Risk profiler quiz with 5 questions and investor profile result
-- /quiz → Personalized fund recommendation card + filtered top funds by AI category (Direct Growth, recent NAV)
+- /quiz → Risk profiler quiz with 7 questions, progress indicator, and Hinglish investor profile result
+- /quiz → Personalized fund recommendation card + top funds based on risk profile search (Direct Growth, shows NAV); fallbacks only on network failure; fund links open in a new tab
 - /portfolio → Portfolio tracker with Simple Mode (amount+date only) 
   and Advanced Mode (units+NAV). Auto fetches historical NAV in Simple Mode.
 
