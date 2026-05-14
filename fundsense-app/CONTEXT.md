@@ -15,7 +15,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - / (home) → Live fund search with dropdown, animated placeholder, stats bar, and live market ticker (Nifty and Sensex) via server API
 - /fund/[code] → Fund detail with NAV, 1M/6M/1Y/3Y returns, risk badge
 - /compare → Side by side fund comparison with winner highlights and verdict
-- /sip → Calculators (SIP + Tax) with personal tax tips
+- /sip → Calculators (SIP + Tax) with personal tax tips and SIP fund search to auto-fill 3Y CAGR returns (falls back to 1Y, supports negative returns, warns on Regular/IDCW, rounds slider value, syncs slider via ref, shows capped-CAGR notice)
 - /quiz → Risk profiler quiz with 7 questions, progress indicator, and Hinglish investor profile result
 - /quiz → Personalized fund recommendation card + top funds based on risk profile search (Direct Growth, shows NAV); fallbacks only on network failure; fund links open in a new tab
 - /portfolio → Portfolio tracker with Simple Mode (amount+date only) 
