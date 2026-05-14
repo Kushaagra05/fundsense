@@ -19,7 +19,7 @@ with Next.js 14, Tailwind CSS, TypeScript.
 - /quiz → Risk profiler quiz with 7 questions, progress indicator, and Hinglish investor profile result
 - /quiz → Personalized fund recommendation card + top funds based on risk profile search (Direct Growth, shows NAV); fallbacks only on network failure; fund links open in a new tab
 - /portfolio → Portfolio tracker with Simple Mode (amount+date only) 
-  and Advanced Mode (units+NAV). Auto fetches historical NAV in Simple Mode.
+  and Advanced Mode (units+NAV). Auto fetches historical NAV in Simple Mode. Includes Weekly Watchlist Summary with AI Hinglish summary, fund pills, refresh button, and localStorage caching (updates weekly or on watchlist changes).
 
 ## Key Features Already Built
 - Fund variant badges in search (Direct/Regular/Growth/IDCW)

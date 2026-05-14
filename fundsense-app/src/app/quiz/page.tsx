@@ -122,29 +122,11 @@ export default function Quiz() {
     document.body.style.overflow = "auto";
   }, []);
 
-  useEffect(() => {
-    if (showResult) {
-      const timer = setTimeout(() => setResultVisible(true), 50);
-      return () => clearTimeout(timer);
-    }
-    setResultVisible(false);
-    return undefined;
-  }, [showResult]);
-
-  useEffect(() => {
-    if (showResult) return;
-    if (currentQuestion === 3) {
-      setToastMessage("Halfway there!");
-    } else if (currentQuestion === 5) {
-      setToastMessage("Almost done!");
-    } else {
-      setToastMessage(null);
-      return;
-    }
-
-    const timer = setTimeout(() => setToastMessage(null), 1800);
-    return () => clearTimeout(timer);
-  }, [currentQuestion, showResult]);
+  const showToast = (message: string | null) => {
+    setToastMessage(message);
+    if (!message) return;
+    setTimeout(() => setToastMessage(null), 1800);
+  };
 
   const progressPct = ((currentQuestion + 1) / questions.length) * 100;
 
@@ -219,17 +201,29 @@ export default function Quiz() {
     });
 
     setTimeout(() => {
-      if (currentQuestion + 1 < questions.length) {
-        setCurrentQuestion((prev) => prev + 1);
+      const nextQuestion = currentQuestion + 1;
+      if (nextQuestion < questions.length) {
+        setCurrentQuestion(nextQuestion);
         setIsFading(false);
+        if (nextQuestion === 3) {
+          showToast("Halfway there!");
+        } else if (nextQuestion === 5) {
+          showToast("Almost done!");
+        } else {
+          showToast(null);
+        }
       } else {
         setShowResult(true);
+        setResultVisible(false);
+        setTimeout(() => setResultVisible(true), 50);
       }
     }, 300);
   };
 
   const handleRetake = () => {
     setShowResult(false);
+    setResultVisible(false);
+    showToast(null);
     setIsFading(true);
     setTimeout(() => {
       setCurrentQuestion(0);
@@ -239,6 +233,8 @@ export default function Quiz() {
       setRecReply("");
       setRecError(null);
       setRecLoading(false);
+      setTopFunds([]);
+      setTopFundsMessage("");
       setIsFading(false);
     }, 300);
   };
@@ -268,44 +264,7 @@ export default function Quiz() {
     ].join("\n");
   };
 
-  const handleRecommendation = async () => {
-    if (!sipBudget || recLoading) return;
-    setRecLoading(true);
-    setRecError(null);
-    setRecReply("");
-
-    try {
-      const res = await fetch("/api/fund-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: buildRecommendationPrompt() }] }),
-      });
-
-      if (!res.ok) throw new Error("Request failed");
-      const data = (await res.json()) as { reply?: string };
-      const reply = data.reply?.trim() || "";
-      setRecReply(reply || "Response unavailable.");
-    } catch {
-      setRecError("AI response abhi available nahi hai.");
-    } finally {
-      setRecLoading(false);
-    }
-  };
-
-  const getRiskTier = () => {
-    if (totalScore >= 15) return "aggressive" as const;
-    if (totalScore >= 9) return "moderate" as const;
-    return "conservative" as const;
-  };
-
-  useEffect(() => {
-    if (!recReply) {
-      setTopFunds([]);
-      setTopFundsMessage("");
-      return;
-    }
-
-    const tier = getRiskTier();
+  const fetchTopFunds = async (tier: "conservative" | "moderate" | "aggressive") => {
     const searchQuery =
       tier === "conservative"
         ? "SBI debt direct growth"
@@ -328,65 +287,75 @@ export default function Quiz() {
       ],
     };
 
-    let isActive = true;
-    const fetchTopFunds = async () => {
-      try {
-        setTopFundsMessage("");
-        const res = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(searchQuery)}`);
-        if (!res.ok) {
-          setTopFunds([]);
-          setTopFundsMessage("No matching funds found.");
-          return;
-        }
-        const data = await res.json();
-        console.log("Quiz top funds search", { searchQuery, data });
-        const items = Array.isArray(data) ? data : data?.data ?? [];
-        const filtered = (items as FundListItem[]).filter((fund) => {
-          const name = fund.schemeName || "";
-          const lower = name.toLowerCase();
-          return lower.includes("direct") && lower.includes("growth");
-        });
-        const candidates = filtered.slice(0, 3);
-        if (candidates.length === 0) {
-          setTopFunds([]);
-          setTopFundsMessage("No matching funds found.");
-          return;
-        }
-
-        const withNav = await Promise.all(
-          candidates.map(async (fund) => {
-            try {
-              const detailRes = await fetch(`https://api.mfapi.in/mf/${fund.schemeCode}`);
-              if (!detailRes.ok) return { ...fund, nav: null } as TopFund;
-              const detail = await detailRes.json();
-              const navText = detail?.data?.[0]?.nav;
-              const navValue = navText ? parseFloat(navText) : null;
-              return { ...fund, nav: navValue && navValue > 0 ? navValue : null } as TopFund;
-            } catch {
-              return { ...fund, nav: null } as TopFund;
-            }
-          })
-        );
-
-        if (!isActive) return;
-        setTopFunds(withNav);
-      } catch (error) {
-        if (!isActive) return;
-        if (error instanceof TypeError) {
-          setTopFunds(fallbackMap[tier]);
-          setTopFundsMessage("");
-          return;
-        }
+    try {
+      setTopFundsMessage("");
+      const res = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) {
         setTopFunds([]);
         setTopFundsMessage("No matching funds found.");
+        return;
       }
-    };
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : data?.data ?? [];
+      const picks = items.slice(0, 2);
+      if (!picks.length) {
+        setTopFunds(fallbackMap[tier]);
+        setTopFundsMessage("Using fallback fund picks.");
+        return;
+      }
+      const navs = await Promise.all(
+        picks.map(async (fund: FundListItem) => {
+          try {
+            const navRes = await fetch(`https://api.mfapi.in/mf/${fund.schemeCode}`);
+            if (!navRes.ok) throw new Error("NAV error");
+            const navData = await navRes.json();
+            const nav = navData?.data?.[0]?.nav ?? null;
+            return { ...fund, nav: nav ? Number(nav) : null } as TopFund;
+          } catch {
+            return { ...fund, nav: null } as TopFund;
+          }
+        })
+      );
+      setTopFunds(navs);
+    } catch {
+      setTopFunds(fallbackMap[tier]);
+      setTopFundsMessage("Using fallback fund picks.");
+    }
+  };
 
-    fetchTopFunds();
-    return () => {
-      isActive = false;
-    };
-  }, [recReply, totalScore]);
+  const handleRecommendation = async () => {
+    if (!sipBudget || recLoading) return;
+    setRecLoading(true);
+    setRecError(null);
+    setRecReply("");
+    setTopFunds([]);
+    setTopFundsMessage("");
+
+    try {
+      const res = await fetch("/api/fund-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: buildRecommendationPrompt() }] }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+      const data = (await res.json()) as { reply?: string };
+      const reply = data.reply?.trim() || "";
+      setRecReply(reply || "Response unavailable.");
+      const tier = getRiskTier();
+      await fetchTopFunds(tier);
+    } catch {
+      setRecError("AI response abhi available nahi hai.");
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
+  const getRiskTier = () => {
+    if (totalScore >= 15) return "aggressive" as const;
+    if (totalScore >= 9) return "moderate" as const;
+    return "conservative" as const;
+  };
 
   const current = questions[currentQuestion];
 

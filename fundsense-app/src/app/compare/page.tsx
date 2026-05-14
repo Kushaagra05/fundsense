@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
@@ -23,6 +23,7 @@ interface FundDetails {
     scheme_category?: string;
   };
   data: NavData[];
+  status?: string;
 }
 
 interface RiskLevel {
@@ -45,6 +46,31 @@ interface ComparisonWins {
   w3y: boolean;
   wrisk: boolean;
 }
+
+const Row = ({ label, value, isWinner, isDraw, isReturn = true }: { label: string; value: string; isWinner: boolean; isDraw?: boolean; isReturn?: boolean }) => {
+  let valClass = "text-slate-200 font-semibold";
+  if (isReturn && value !== "N/A") {
+    valClass = parseFloat(value) >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold";
+  }
+  if (isWinner) valClass = "text-emerald-400 font-extrabold drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]";
+
+  return (
+    <div className="flex justify-between items-center py-3 border-b border-white/[0.04] last:border-0">
+      <span className="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wide">{label}</span>
+      <span className={`${valClass} text-base sm:text-lg flex items-center gap-2`}>
+        {value}
+        {isWinner && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        )}
+        {isDraw && (
+          <span className="text-slate-500 font-bold ml-1">=</span>
+        )}
+      </span>
+    </div>
+  );
+};
 
 export default function ComparePage() {
   const [allFunds, setAllFunds] = useState<FundListItem[]>([]);
@@ -70,8 +96,8 @@ export default function ComparePage() {
     wins2: ComparisonWins;
     draws: { d1m: boolean; d1y: boolean; d3y: boolean; drisk: boolean };
     verdict: string;
-    meta1: any;
-    meta2: any;
+    meta1: FundDetails["meta"];
+    meta2: FundDetails["meta"];
   } | null>(null);
 
   const dropdownRef1 = useRef<HTMLDivElement>(null);
@@ -222,7 +248,7 @@ export default function ComparePage() {
       const d1: FundDetails = await res1.json();
       const d2: FundDetails = await res2.json();
 
-      if ((d1 as any).status === "FAIL" || (d2 as any).status === "FAIL") {
+      if (d1.status === "FAIL" || d2.status === "FAIL") {
         throw new Error("Failed to load fund details");
       }
 
@@ -355,31 +381,6 @@ export default function ComparePage() {
     return `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`;
   };
 
-  const Row = ({ label, value, isWinner, isDraw, isReturn = true }: { label: string; value: string; isWinner: boolean; isDraw?: boolean; isReturn?: boolean }) => {
-    let valClass = "text-slate-200 font-semibold";
-    if (isReturn && value !== "N/A") {
-      valClass = parseFloat(value) >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold";
-    }
-    if (isWinner) valClass = "text-emerald-400 font-extrabold drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]";
-
-    return (
-      <div className="flex justify-between items-center py-3 border-b border-white/[0.04] last:border-0">
-        <span className="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wide">{label}</span>
-        <span className={`${valClass} text-base sm:text-lg flex items-center gap-2`}>
-          {value}
-          {isWinner && (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          )}
-          {isDraw && (
-            <span className="text-slate-500 font-bold ml-1">=</span>
-          )}
-        </span>
-      </div>
-    );
-  };
-
   const highlightMatch = (text: string, query: string) => {
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
     if (idx === -1) return text;
@@ -424,7 +425,7 @@ export default function ComparePage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
-          <p>⚠️ You're comparing two variants of the same fund. Consider comparing funds from different categories for meaningful insights.</p>
+          <p>⚠️ You&apos;re comparing two variants of the same fund. Consider comparing funds from different categories for meaningful insights.</p>
         </div>
       )}
 

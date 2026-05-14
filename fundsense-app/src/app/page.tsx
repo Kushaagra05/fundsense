@@ -1,17 +1,18 @@
 "use client";
-import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+
+type FundListItem = {
+  schemeCode: number;
+  schemeName: string;
+};
 
 export default function HomePage() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [selectedFund, setSelectedFund] = useState<any | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [allFunds, setAllFunds] = useState<any[]>([]);
-  const [marketLoading, setMarketLoading] = useState(false);
+  const [allFunds, setAllFunds] = useState<FundListItem[]>([]);
   const [marketData, setMarketData] = useState<Record<string, { price: number | null; changePct: number | null }>>({});
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -67,7 +68,6 @@ export default function HomePage() {
     let isActive = true;
 
     const fetchMarketData = async () => {
-      setMarketLoading(true);
       try {
         const res = await fetch("/api/market-data", { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -92,8 +92,6 @@ export default function HomePage() {
         if (isActive) {
           setMarketData({});
         }
-      } finally {
-        if (isActive) setMarketLoading(false);
       }
     };
 
@@ -105,21 +103,18 @@ export default function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
+  const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) {
-      setResults([]);
-      return;
-    }
-    const matches = allFunds.filter((fund) => {
-      const name = (fund?.schemeName || "").toLowerCase();
-      if (!name) return false;
-      return name
-        .split(/[\s-]+/)
-        .some((part: string) => part.startsWith(normalized));
-    });
-    setResults(matches.slice(0, 12));
-    setActiveIndex(-1);
+    if (!normalized) return [] as FundListItem[];
+    return allFunds
+      .filter((fund) => {
+        const name = (fund?.schemeName || "").toLowerCase();
+        if (!name) return false;
+        return name
+          .split(/[\s-]+/)
+          .some((part: string) => part.startsWith(normalized));
+      })
+      .slice(0, 12);
   }, [query, allFunds]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -142,8 +137,7 @@ export default function HomePage() {
     }
   };
 
-  const selectFund = (fund: any) => {
-    setSelectedFund(fund);
+  const selectFund = (fund: FundListItem) => {
     setQuery(fund.schemeName);
     setShowDropdown(false);
     if (!fund || !fund.schemeCode) {
@@ -246,7 +240,7 @@ export default function HomePage() {
               type="text"
               placeholder={isLoading ? "Loading fund database..." : searchPlaceholders[placeholderIndex]}
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
+              onChange={(e) => { setQuery(e.target.value); setActiveIndex(-1); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}

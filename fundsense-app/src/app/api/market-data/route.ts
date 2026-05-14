@@ -5,6 +5,17 @@ type MarketResponse = {
   change: number | null;
 };
 
+type YahooChartResponse = {
+  chart?: {
+    result?: Array<{
+      meta?: {
+        regularMarketPrice?: number;
+        regularMarketChangePercent?: number;
+      };
+    }>;
+  };
+};
+
 const symbols = {
   nifty: "^NSEI",
   sensex: "^BSESN",
@@ -13,7 +24,7 @@ const symbols = {
 const buildUrl = (symbol: string) =>
   `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`;
 
-const parseMarket = (data: any): MarketResponse => {
+const parseMarket = (data: YahooChartResponse): MarketResponse => {
   const meta = data?.chart?.result?.[0]?.meta;
   return {
     price: typeof meta?.regularMarketPrice === "number" ? meta.regularMarketPrice : null,
@@ -38,7 +49,7 @@ export async function GET() {
       nifty: niftyData ? parseMarket(niftyData) : { price: null, change: null },
       sensex: sensexData ? parseMarket(sensexData) : { price: null, change: null },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       nifty: { price: null, change: null },
       sensex: { price: null, change: null },

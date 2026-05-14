@@ -112,6 +112,43 @@ function getRiskBadge(name: string) {
   }
 }
 
+function ReturnDisplay({ label, value }: { label: string; value: number | null }) {
+  if (value === null) {
+    return (
+      <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
+        <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
+          <span className="inline-flex items-center gap-1">
+            {label}
+            <Tooltip
+              term={label}
+              explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
+            />
+          </span>
+        </p>
+        <p className="text-2xl font-bold tracking-tight text-slate-500">N/A</p>
+      </div>
+    );
+  }
+
+  const isPositive = value >= 0;
+  return (
+    <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
+      <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
+        <span className="inline-flex items-center gap-1">
+          {label}
+          <Tooltip
+            term={label}
+            explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
+          />
+        </span>
+      </p>
+      <p className={`text-2xl font-bold tracking-tight ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+        {isPositive ? '+' : ''}{value.toFixed(2)}%
+      </p>
+    </div>
+  );
+}
+
 export default function FundDetailClient() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -146,9 +183,10 @@ export default function FundDetailClient() {
         }
 
         setFund(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch fund:', err);
-        setError(`Could not load fund with scheme code "${code}". ${err.message}`);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(`Could not load fund with scheme code "${code}". ${message}`);
       } finally {
         setLoading(false);
       }
@@ -332,18 +370,18 @@ export default function FundDetailClient() {
     const text = `Check out ${title} on FundSense — AI-powered mutual fund analyzer for Indian investors`;
 
     try {
-      if (typeof navigator !== 'undefined' && 'share' in navigator) {
-        await (navigator as any).share({ title, text, url });
+      if (typeof navigator !== 'undefined' && 'share' in navigator && typeof navigator.share === 'function') {
+        await navigator.share({ title, text, url });
         return;
       }
-    } catch (e) {
+    } catch {
       // ignore share errors and fall back to copy
     }
 
     // Fallback: copy to clipboard
     try {
       await navigator.clipboard.writeText(url);
-    } catch (err) {
+    } catch {
       const ta = document.createElement('textarea');
       ta.value = url;
       document.body.appendChild(ta);
@@ -440,42 +478,6 @@ export default function FundDetailClient() {
 
   const formatReturn = (value: number | null) => (value === null ? 'N/A' : `${value.toFixed(2)}%`);
   const fundContext = `Fund: ${meta.scheme_name}\nFund House: ${meta.fund_house || 'N/A'}\nCategory: ${meta.scheme_category || meta.scheme_type || 'N/A'}\nCurrent NAV: ₹${latestNav.toFixed(4)}\nReturns: 1M ${formatReturn(return1m)}, 6M ${formatReturn(return6m)}, 1Y ${formatReturn(return1y)}, 3Y CAGR ${formatReturn(return3y)}`;
-
-  const ReturnDisplay = ({ label, value }: { label: string, value: number | null }) => {
-    if (value === null) {
-      return (
-        <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
-          <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
-            <span className="inline-flex items-center gap-1">
-              {label}
-              <Tooltip
-                term={label}
-                explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
-              />
-            </span>
-          </p>
-          <p className="text-2xl font-bold tracking-tight text-slate-500">N/A</p>
-        </div>
-      );
-    }
-    const isPositive = value >= 0;
-    return (
-      <div className="card-glass border border-white/[0.06] rounded-2xl p-5 backdrop-blur-lg">
-        <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider mb-2">
-          <span className="inline-flex items-center gap-1">
-            {label}
-            <Tooltip
-              term={label}
-              explanation="CAGR = Compound Annual Growth Rate. How much the fund grew per year on average."
-            />
-          </span>
-        </p>
-        <p className={`text-2xl font-bold tracking-tight ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-          {isPositive ? '+' : ''}{value.toFixed(2)}%
-        </p>
-      </div>
-    );
-  };
 
   return (
     <>

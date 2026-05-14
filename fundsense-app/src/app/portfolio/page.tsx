@@ -40,6 +40,7 @@ type WatchlistEntry = {
 
 type WatchlistStats = WatchlistEntry & {
   currentNav: number | null;
+  return1w: number | null;
   return1y: number | null;
   return3y: number | null;
 };
@@ -104,6 +105,46 @@ function calcCAGR(navData: { date: string; nav: string }[], years: number) {
   return (Math.pow(latestNav / pastNav, 1 / years) - 1) * 100;
 }
 
+const getFundBadges = (name: string) => {
+  const lower = name.toLowerCase();
+  const badges: { label: string; className: string }[] = [];
+  if (lower.includes("direct")) badges.push({ label: "Direct ✓ (Lower fees, recommended)", className: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" });
+  if (lower.includes("regular")) badges.push({ label: "Regular (Higher fees)", className: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25" });
+  if (lower.includes("growth")) badges.push({ label: "Growth (Best for long term)", className: "bg-sky-500/15 text-sky-400 border border-sky-500/25" });
+  if (lower.includes("idcw") || lower.includes("dividend")) badges.push({ label: "IDCW (Pays dividends, tax inefficient)", className: "bg-slate-500/15 text-slate-300 border border-white/[0.12]" });
+  return badges;
+};
+
+const SearchDropdown = ({
+  showDropdown,
+  searchQuery,
+  funds,
+  onSelect,
+}: {
+  showDropdown: boolean;
+  searchQuery: string;
+  funds: FundListItem[];
+  onSelect: (fund: FundListItem) => void;
+}) => (
+  <div className={`${showDropdown ? "" : "hidden"} absolute left-0 right-0 top-full mt-2 rounded-xl border border-white/[0.08] bg-slate-800/95 backdrop-blur-xl shadow-xl overflow-hidden z-[9999]`}>
+    <ul className="list-none m-0 p-1.5 max-h-[250px] overflow-y-auto">
+      {searchQuery.trim().length >= 2 && funds.length === 0 && (
+        <li className="px-3 py-2 text-sm text-slate-400">No funds found</li>
+      )}
+      {funds.map((fund) => (
+        <li key={fund.schemeCode} className="px-3 py-2 text-sm text-slate-200 rounded-lg cursor-pointer hover:bg-indigo-500/15 hover:text-white" onMouseDown={() => onSelect(fund)}>
+          <div className="text-sm text-slate-200 font-medium">{fund.schemeName}</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {getFundBadges(fund.schemeName).map((badge) => (
+              <span key={badge.label} className={`text-[11px] px-2 py-1 rounded-full border ${badge.className}`}>{badge.label}</span>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
 export default function Portfolio() {
   const [allFunds, setAllFunds] = useState<FundListItem[]>([]);
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
@@ -127,6 +168,10 @@ export default function Portfolio() {
   const [exitCheckReply, setExitCheckReply] = useState<string>("");
   const [exitCheckLoading, setExitCheckLoading] = useState(false);
   const [exitCheckError, setExitCheckError] = useState<string | null>(null);
+  const [weeklySummary, setWeeklySummary] = useState("");
+  const [weeklySummaryLoading, setWeeklySummaryLoading] = useState(false);
+  const [weeklySummaryError, setWeeklySummaryError] = useState<string | null>(null);
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<number | null>(null);
   const exitCheckIdRef = useRef<string | null>(null);
 
   const fetchNavsForEntries = useCallback(async (entries: PortfolioEntry[]) => {
@@ -203,15 +248,18 @@ export default function Portfolio() {
             .order("created_at", { ascending: false });
 
           if (rows && rows.length > 0) {
-            const mapped = rows.map((row: any) => ({
-              id: String(row.id),
-              code: Number(row.code ?? row.scheme_code ?? row.schemeCode),
-              name: row.name ?? row.scheme_name ?? row.schemeName,
-              units: Number(row.units),
-              buyNav: Number(row.buy_nav ?? row.buyNav),
-              date: row.date,
-              curNav: null,
-            })) as PortfolioEntry[];
+            const mapped = rows.map((row: Record<string, unknown>) => {
+              const raw = row as Record<string, unknown>;
+              return {
+                id: String(raw.id),
+                code: Number(raw.code ?? raw.scheme_code ?? raw.schemeCode),
+                name: String(raw.name ?? raw.scheme_name ?? raw.schemeName ?? ""),
+                units: Number(raw.units),
+                buyNav: Number(raw.buy_nav ?? raw.buyNav),
+                date: String(raw.date ?? ""),
+                curNav: null,
+              } as PortfolioEntry;
+            });
             setPortfolio(mapped);
             fetchNavsForEntries(mapped);
           } else {
@@ -220,12 +268,15 @@ export default function Portfolio() {
           }
 
           if (watchlistRows && watchlistRows.length > 0) {
-            const mappedWatchlist = watchlistRows.map((row: any) => ({
-              id: String(row.id),
-              code: Number(row.code),
-              name: String(row.name ?? "Unnamed Fund"),
-              createdAt: String(row.created_at ?? ""),
-            })) as WatchlistEntry[];
+            const mappedWatchlist = watchlistRows.map((row: Record<string, unknown>) => {
+              const raw = row as Record<string, unknown>;
+              return {
+                id: String(raw.id),
+                code: Number(raw.code),
+                name: String(raw.name ?? "Unnamed Fund"),
+                createdAt: String(raw.created_at ?? ""),
+              } as WatchlistEntry;
+            });
             setWatchlist(mappedWatchlist);
           } else {
             setWatchlist([]);
@@ -326,16 +377,6 @@ export default function Portfolio() {
     return allFunds.filter((f) => f.schemeName.toLowerCase().includes(query)).slice(0, 8);
   }, [allFunds, searchQuery]);
 
-  const getFundBadges = (name: string) => {
-    const lower = name.toLowerCase();
-    const badges: { label: string; className: string }[] = [];
-    if (lower.includes("direct")) badges.push({ label: "Direct ✓ (Lower fees, recommended)", className: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" });
-    if (lower.includes("regular")) badges.push({ label: "Regular (Higher fees)", className: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25" });
-    if (lower.includes("growth")) badges.push({ label: "Growth (Best for long term)", className: "bg-sky-500/15 text-sky-400 border border-sky-500/25" });
-    if (lower.includes("idcw") || lower.includes("dividend")) badges.push({ label: "IDCW (Pays dividends, tax inefficient)", className: "bg-slate-500/15 text-slate-300 border border-white/[0.12]" });
-    return badges;
-  };
-
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value);
 
@@ -368,11 +409,63 @@ export default function Portfolio() {
     await fetchNavsForEntries(portfolio);
   }, [fetchNavsForEntries, portfolio]);
 
+  const buildWeeklySummaryPrompt = (stats: WatchlistStats[]) => {
+    const lines = stats.map((item) => {
+      const oneWeek = item.return1w === null ? "N/A" : `${item.return1w >= 0 ? "+" : ""}${item.return1w.toFixed(2)}%`;
+      const oneYear = item.return1y === null ? "N/A" : `${item.return1y >= 0 ? "+" : ""}${item.return1y.toFixed(2)}%`;
+      const threeYear = item.return3y === null ? "N/A" : `${item.return3y >= 0 ? "+" : ""}${item.return3y.toFixed(2)}%`;
+      return `- ${item.name}: 1W ${oneWeek}, 1Y ${oneYear}, 3Y CAGR ${threeYear}`;
+    });
+
+    return [
+      "Give a short Hinglish summary of the past week's performance in 3-4 concise bullet points.",
+      "Each point should be brief - mention specific funds' performance and one actionable suggestion.",
+      "Here is the watchlist performance:",
+      ...lines,
+    ].join("\n");
+  };
+
+  const fetchWeeklySummary = useCallback(async (stats: WatchlistStats[], force = false) => {
+    if (stats.length === 0) return;
+
+    setWeeklySummaryLoading(true);
+    setWeeklySummaryError(null);
+    try {
+      const prompt = buildWeeklySummaryPrompt(stats);
+      const res = await fetch("/api/fund-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+      const data = (await res.json()) as { reply?: string };
+      const summary = data.reply?.trim() || "";
+      setWeeklySummary(summary);
+      const generatedAt = Date.now();
+      setSummaryGeneratedAt(generatedAt);
+      // Store cache
+      const fundCodes = stats.map(item => item.code);
+      localStorage.setItem('fundsense_weekly_summary', JSON.stringify({
+        summary,
+        generatedAt,
+        fundCodes
+      }));
+    } catch {
+      setWeeklySummaryError("Weekly summary abhi available nahi hai.");
+    } finally {
+      setWeeklySummaryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (portfolio.length === 0) return;
     const hasMissingNav = portfolio.some((item) => item.curNav === null || Number.isNaN(item.curNav));
     if (!hasMissingNav) return;
-    fetchNavsForEntries(portfolio);
+    const timer = setTimeout(() => {
+      fetchNavsForEntries(portfolio);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchNavsForEntries, portfolio]);
 
   useEffect(() => {
@@ -396,13 +489,15 @@ export default function Portfolio() {
               return {
                 ...item,
                 currentNav,
+                return1w: calcReturn(navData, 7),
                 return1y: calcReturn(navData, 365),
                 return3y: calcCAGR(navData, 3),
               };
-            } catch (error) {
+            } catch {
               return {
                 ...item,
                 currentNav: null,
+                return1w: null,
                 return1y: null,
                 return3y: null,
               };
@@ -411,13 +506,40 @@ export default function Portfolio() {
         );
 
         setWatchlistStats(updated);
+        if (updated.length > 0) {
+          // Check cache
+          const cached = localStorage.getItem('fundsense_weekly_summary');
+          const currentFundCodes = updated.map(item => item.code).sort();
+          let useCache = false;
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached) as { summary: string; generatedAt: number; fundCodes: number[] };
+              const now = Date.now();
+              const sevenDays = 7 * 24 * 60 * 60 * 1000;
+              const cachedFundCodes = parsed.fundCodes.sort();
+              if (now - parsed.generatedAt < sevenDays && 
+                  JSON.stringify(currentFundCodes) === JSON.stringify(cachedFundCodes)) {
+                setWeeklySummary(parsed.summary);
+                setSummaryGeneratedAt(parsed.generatedAt);
+                useCache = true;
+              }
+            } catch {
+              // Invalid cache, ignore
+            }
+          }
+          if (!useCache) {
+            setTimeout(() => {
+              fetchWeeklySummary(updated);
+            }, 0);
+          }
+        }
       } finally {
         setWatchlistLoading(false);
       }
     };
 
     fetchWatchlistStats();
-  }, [watchlist]);
+  }, [watchlist, fetchWeeklySummary]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -660,26 +782,6 @@ export default function Portfolio() {
     }
   };
 
-  const SearchDropdown = ({ funds }: { funds: FundListItem[] }) => (
-    <div className={`${showDropdown ? "" : "hidden"} absolute left-0 right-0 top-full mt-2 rounded-xl border border-white/[0.08] bg-slate-800/95 backdrop-blur-xl shadow-xl overflow-hidden z-[9999]`}>
-      <ul className="list-none m-0 p-1.5 max-h-[250px] overflow-y-auto">
-        {searchQuery.trim().length >= 2 && funds.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-400">No funds found</li>
-        )}
-        {funds.map((fund) => (
-          <li key={fund.schemeCode} className="px-3 py-2 text-sm text-slate-200 rounded-lg cursor-pointer hover:bg-indigo-500/15 hover:text-white" onMouseDown={() => handleSelectFund(fund)}>
-            <div className="text-sm text-slate-200 font-medium">{fund.schemeName}</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {getFundBadges(fund.schemeName).map((badge) => (
-                <span key={badge.label} className={`text-[11px] px-2 py-1 rounded-full border ${badge.className}`}>{badge.label}</span>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-
   return (
     <>
       <Navbar />
@@ -815,7 +917,12 @@ export default function Portfolio() {
                   {searchQuery && <button type="button" onMouseDown={handleClearSearch} className="text-slate-400 hover:text-white px-3">✕</button>}
                 </div>
                 <p className="mt-2 text-xs text-slate-400">💡 Tip: Always choose Direct + Growth option for best long-term returns</p>
-                <SearchDropdown funds={filteredFunds} />
+                <SearchDropdown
+                  showDropdown={showDropdown}
+                  searchQuery={searchQuery}
+                  funds={filteredFunds}
+                  onSelect={handleSelectFund}
+                />
               </div>
               <div className="md:col-span-3">
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Amount Invested (₹)</label>
@@ -840,7 +947,12 @@ export default function Portfolio() {
                   {searchQuery && <button type="button" onMouseDown={handleClearSearch} className="text-slate-400 hover:text-white px-3">✕</button>}
                 </div>
                 <p className="mt-2 text-xs text-slate-400">💡 Find units and NAV in your broker statement</p>
-                <SearchDropdown funds={filteredFunds} />
+                <SearchDropdown
+                  showDropdown={showDropdown}
+                  searchQuery={searchQuery}
+                  funds={filteredFunds}
+                  onSelect={handleSelectFund}
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Units</label>
@@ -1020,6 +1132,75 @@ export default function Portfolio() {
           )}
         </div>
 
+        {watchlist.length > 0 && (
+          <div className="card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg mt-10">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h3 className="text-xl font-bold text-white">📊 Weekly Watchlist Summary</h3>
+              <button
+                type="button"
+                onClick={() => fetchWeeklySummary(watchlistStats, true)}
+                disabled={weeklySummaryLoading || watchlistLoading}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/[0.08] bg-slate-800/60 text-slate-300 hover:text-white hover:bg-slate-700/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Refresh Summary
+              </button>
+            </div>
+            {summaryGeneratedAt && (
+              <div className="text-xs text-slate-500 mb-3">
+                Last updated: {(() => {
+                  const now = new Date();
+                  const generated = new Date(summaryGeneratedAt);
+                  const diffDays = Math.floor((now.getTime() - generated.getTime()) / (1000 * 60 * 60 * 24));
+                  if (diffDays === 0) return 'Today';
+                  if (diffDays === 1) return 'Yesterday';
+                  return `${diffDays} days ago`;
+                })()}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 mb-5">
+              {watchlistLoading && watchlistStats.length === 0 ? (
+                Array.from({ length: Math.min(3, watchlist.length) }).map((_, index) => (
+                  <div key={`pill-skeleton-${index}`} className="h-7 w-40 rounded-full bg-slate-700/60 animate-pulse"></div>
+                ))
+              ) : watchlistStats.map((item) => {
+                const returnText = item.return1y === null ? "N/A" : `${item.return1y >= 0 ? "+" : ""}${item.return1y.toFixed(2)}%`;
+                const pillClass = item.return1y === null
+                  ? "bg-slate-500/15 text-slate-300 border border-white/[0.12]"
+                  : item.return1y >= 0
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+                    : "bg-red-500/15 text-red-300 border border-red-500/25";
+                return (
+                  <span key={item.id} className={`text-xs font-semibold px-3 py-1 rounded-full ${pillClass}`}>
+                    {item.name} • {returnText}
+                  </span>
+                );
+              })}
+            </div>
+
+            <div className="bg-slate-800/40 rounded-xl p-4 text-sm text-slate-200">
+              {weeklySummaryLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-3 w-4/5 bg-slate-700/60 rounded"></div>
+                  <div className="h-3 w-3/5 bg-slate-700/60 rounded"></div>
+                  <div className="h-3 w-2/3 bg-slate-700/60 rounded"></div>
+                </div>
+              ) : weeklySummaryError ? (
+                <span className="text-amber-200">{weeklySummaryError}</span>
+              ) : (
+                <div className="space-y-1">
+                  {weeklySummary.split('\n').filter(line => line.trim()).map((line, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <span className="text-slate-400 mt-0.5">•</span>
+                      <span>{line.trim()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="mt-10 card-glass border border-white/[0.06] rounded-2xl p-6 sm:p-8 backdrop-blur-lg">
           <div className="flex items-center justify-between gap-3 mb-5">
             <h3 className="text-xl font-bold text-white">Watchlist</h3>
@@ -1061,25 +1242,32 @@ export default function Portfolio() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {watchlistStats.length > 0 ? watchlistStats.map((item) => {
+                const return1wClass = item.return1w === null ? "text-slate-400" : item.return1w >= 0 ? "text-emerald-400" : "text-red-400";
+                const return1wSign = item.return1w !== null && item.return1w > 0 ? "+" : "";
                 const return1yClass = item.return1y === null ? "text-slate-400" : item.return1y >= 0 ? "text-emerald-400" : "text-red-400";
                 const return1ySign = item.return1y !== null && item.return1y > 0 ? "+" : "";
                 const currentNavText = item.currentNav !== null ? `₹${item.currentNav.toFixed(4)}` : "N/A";
+                const return1wText = item.return1w === null ? "N/A" : `${return1wSign}${item.return1w.toFixed(2)}%`;
                 const return1yText = item.return1y === null ? "N/A" : `${return1ySign}${item.return1y.toFixed(2)}%`;
                 const return3yText = item.return3y === null ? "N/A" : `${item.return3y >= 0 ? "+" : ""}${item.return3y.toFixed(2)}%`;
 
                 return (
                   <div key={item.id} className="bg-slate-800/60 border border-white/[0.08] rounded-xl p-4 flex flex-col gap-4">
                     <p className="text-sm font-semibold text-slate-100 leading-6 line-clamp-2" title={item.name}>{item.name}</p>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-3 gap-3 text-sm">
                       <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Current NAV</p>
                         <p className="mt-1 font-semibold text-slate-100">{currentNavText}</p>
                       </div>
                       <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">1W return</p>
+                        <p className={`mt-1 font-semibold ${return1wClass}`}>{return1wText}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">1Y return</p>
                         <p className={`mt-1 font-semibold ${return1yClass}`}>{return1yText}</p>
                       </div>
-                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2 col-span-2">
+                      <div className="rounded-lg bg-slate-900/40 border border-white/[0.05] px-3 py-2 col-span-3">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">3Y CAGR</p>
                         <p className="mt-1 font-semibold text-slate-100">{return3yText}</p>
                       </div>

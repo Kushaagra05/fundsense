@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "@/components/Navbar";
 
 type BreakdownRow = {
@@ -17,16 +17,13 @@ type FundSearchItem = {
 };
 
 export default function SipCalculator() {
-  const [activeTab, setActiveTab] = useState<"sip" | "tax">("sip");
-
-useEffect(() => {
-  if (typeof window !== 'undefined') {
+  const [activeTab, setActiveTab] = useState<"sip" | "tax">(() => {
+    if (typeof window === "undefined") return "sip";
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'tax') {
-      setActiveTab('tax');
-    }
-  }
-}, []);
+    const hash = window.location.hash;
+    if (params.get("tab") === "tax" || hash === "#tax" || hash === "#tax-calculator") return "tax";
+    return "sip";
+  });
   const [monthly, setMonthly] = useState(5000);
   const [durationYears, setDurationYears] = useState(10);
   const [annualReturn, setAnnualReturn] = useState(12);
@@ -50,10 +47,7 @@ useEffect(() => {
 
   useEffect(() => {
     const query = fundQuery.trim();
-    if (!query) {
-      setFundResults([]);
-      return;
-    }
+    if (!query) return;
 
     let isActive = true;
     const fetchFundSearch = async () => {
@@ -77,17 +71,6 @@ useEffect(() => {
       isActive = false;
     };
   }, [fundQuery]);
-
-  // If the URL contains a hash (e.g. #tax), open the corresponding tab on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const h = window.location.hash;
-    if (h === '#tax' || h === '#tax-calculator') {
-      setActiveTab('tax');
-    } else if (h === '#sip') {
-      setActiveTab('sip');
-    }
-  }, []);
 
   const formatCurrency = (num: number) =>
     new Intl.NumberFormat("en-IN", {
@@ -146,12 +129,6 @@ useEffect(() => {
     ? /regular|idcw/i.test(selectedFund.schemeName)
     : false;
 
-  const clampToStep = (value: number, min: number, max: number, step: number) => {
-    if (Number.isNaN(value)) return min;
-    const clamped = Math.min(max, Math.max(min, value));
-    const stepped = Math.round((clamped - min) / step) * step + min;
-    return Math.min(max, Math.max(min, stepped));
-  };
 
   const handleSelectFund = async (fund: FundSearchItem) => {
     setSelectedFund(fund);
@@ -222,10 +199,10 @@ useEffect(() => {
   const totalMonths = durationYears * 12;
   const monthlyRate = annualReturn / 12 / 100;
 
-  const calcCorpus = (months: number) => {
+  const calcCorpus = useCallback((months: number) => {
     if (monthlyRate === 0) return monthly * months;
     return monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
-  };
+  }, [monthly, monthlyRate]);
 
   const totalInvested = monthly * totalMonths;
   const totalCorpus = calcCorpus(totalMonths);
@@ -243,7 +220,7 @@ useEffect(() => {
       const gains = corpus - invested;
       return { year, invested, gains, corpus };
     });
-  }, [durationYears, monthly, monthlyRate]);
+  }, [durationYears, monthly, calcCorpus]);
 
   return (
     <>
@@ -347,11 +324,16 @@ useEffect(() => {
                         type="text"
                         value={fundQuery}
                         onChange={(e) => {
-                          setFundQuery(e.target.value);
+                          const nextQuery = e.target.value;
+                          setFundQuery(nextQuery);
                           setFundDropdownOpen(true);
                           setSelectedFund(null);
                           setActualReturn(null);
                           setReturnLabel(null);
+                          if (!nextQuery.trim()) {
+                            setFundResults([]);
+                            setFundLoading(false);
+                          }
                         }}
                         onFocus={() => setFundDropdownOpen(true)}
                         autoComplete="off"
